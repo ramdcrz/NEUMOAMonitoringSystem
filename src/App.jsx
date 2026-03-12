@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { Toaster } from 'react-hot-toast';
 
 // Component Imports
 import Login from './components/Login';
-import AdminDashboard from './components/AdminDashboard';
+import { AdminDashboard } from './components/AdminDashboard';
+import { FacultyDashboard } from './components/FacultyDashboard';
+import { StudentDashboard } from './components/StudentDashboard';
+import { StatisticsDashboard } from './components/StatisticsDashboard';
 
 /**
  * NEU MOA Monitoring System - Core Application Wrapper
@@ -25,18 +28,19 @@ function App() {
         if (currentUser) {
           const email = currentUser.email.toLowerCase();
           
-          // 1. Database Check (For Manual Admin/Staff Overrides)
+          // 1. Database Check (For Manual Admin/Faculty/Staff Role Overrides)
           const userDoc = await getDoc(doc(db, "users", email));
           
           if (userDoc.exists()) {
-            setRole(userDoc.data().role);
+            setRole(userDoc.data().role || "student");
           } 
           // 2. Institutional Pattern Check (@neu.edu.ph)
           else if (email.endsWith("@neu.edu.ph")) {
             const namePart = email.split('@')[0];
-            // Format: firstname.lastname@neu.edu.ph = Student
-            // Format: fi+lastname@neu.edu.ph = Staff
-            setRole(namePart.includes('.') ? "student" : "staff");
+            // Format: firstname.lastname = Student (contains dot)
+            // Format: f+lastname or similar pattern = Faculty (plus sign)
+            // Format: admin/staff emails = Admin (manual override in database)
+            setRole(namePart.includes('.') ? "student" : "faculty");
           } 
           // 3. Fallback for unauthorized users
           else {
@@ -91,11 +95,31 @@ function App() {
         }}
       />
 
-      {/* Main View Logic: Gatekeep restricted areas from "guests" */}
+      {/* Main View Logic: Role-based Dashboard Routing */}
       {!user || role === "guest" ? (
         <Login onLoginSuccess={(u, r) => { setUser(u); setRole(r); }} />
       ) : (
-        <AdminDashboard user={user} role={role} />
+        <>
+          {role === "admin" && <AdminDashboard user={user} role={role} />}
+          {role === "faculty" && <FacultyDashboard user={user} />}
+          {role === "student" && <StudentDashboard user={user} />}
+          {!role && (
+            <div className="h-screen flex items-center justify-center font-display">
+              <div className="text-center space-y-4">
+                <p className="text-slate-600 font-black">Loading your dashboard...</p>
+                <div className="w-12 h-12 border-4 border-maroon/10 border-t-maroon rounded-full animate-spin mx-auto"></div>
+              </div>
+            </div>
+          )}
+          {role && role !== "admin" && role !== "faculty" && role !== "student" && (
+            <div className="h-screen flex items-center justify-center font-display">
+              <div className="text-center space-y-4">
+                <p className="text-red-600 font-black">Unknown role: {role}</p>
+                <button onClick={() => signOut(auth)} className="px-6 py-3 bg-maroon text-white rounded-xl font-black">Sign Out</button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

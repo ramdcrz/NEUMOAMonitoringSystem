@@ -1,9 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { createMOA, subscribeToMOAs, archiveMOA, subscribeToAudit, updateMOA } from '../services/moaService';
 import { exportMOAsToPDF } from '../services/reportService';
+
+const COLLEGES = ["ALL", "CICS", "CBA", "COE", "CAS", "CED"];
+const MOA_STATUSES = [
+  "APPROVED: Signed by President",
+  "APPROVED: On-going notarization",
+  "APPROVED: No notarization needed",
+  "PROCESSING: Awaiting signature of HTE partner",
+  "PROCESSING: MOA draft sent to Legal Office",
+  "PROCESSING: Sent to VPAA/OP for approval",
+  "EXPIRED: No renewal done",
+  "EXPIRING: Two months before expiration"
+];
+const INDUSTRIES = ["Technology", "Healthcare", "Education", "Finance", "Manufacturing", "Energy", "Retail", "Hospitality", "Government", "Non-profit", "Other"];
 
 const AdminDashboard = ({ user, role }) => {
   const [moas, setMoas] = useState([]);
@@ -14,11 +27,23 @@ const AdminDashboard = ({ user, role }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [formData, setFormData] = useState({ hteId: '', companyName: '', college: 'CICS', status: 'PROCESSING' });
+  const [formData, setFormData] = useState({ 
+    hteId: '', 
+    companyName: '', 
+    address: '',
+    contactPerson: '',
+    contactEmail: '',
+    industry: 'Technology',
+    effectiveDate: '',
+    expiryDate: '',
+    college: 'CICS',
+    endorsedBy: '',
+    status: 'PROCESSING: MOA draft sent to Legal Office',
+    notes: ''
+  });
 
   const isAdmin = role === 'admin';
   const isStaff = role === 'staff';
-  const colleges = ["ALL", "CICS", "CBA", "COE", "CAS", "CED"];
 
   useEffect(() => {
     const unsubMOAs = subscribeToMOAs((data) => setMoas(data));
@@ -27,11 +52,11 @@ const AdminDashboard = ({ user, role }) => {
     return () => { unsubMOAs(); unsubAudit(); };
   }, [isAdmin]);
 
-  const filteredMoas = moas.filter(m => {
+  const filteredMoas = useMemo(() => moas.filter(m => {
     const matchesSearch = m.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) || m.hteId?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCollege = filterCollege === "ALL" || m.college === filterCollege;
     return !m.isDeleted && matchesSearch && matchesCollege;
-  });
+  }), [moas, searchTerm, filterCollege]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -60,7 +85,20 @@ const AdminDashboard = ({ user, role }) => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditId(null);
-    setFormData({ hteId: '', companyName: '', college: 'CICS', status: 'PROCESSING' });
+    setFormData({
+      hteId: '',
+      companyName: '',
+      address: '',
+      contactPerson: '',
+      contactEmail: '',
+      industry: 'Technology',
+      effectiveDate: '',
+      expiryDate: '',
+      college: 'CICS',
+      endorsedBy: '',
+      status: 'PROCESSING: MOA draft sent to Legal Office',
+      notes: ''
+    });
   };
 
   return (
@@ -113,7 +151,7 @@ const AdminDashboard = ({ user, role }) => {
                   <input type="text" placeholder="Search partner institutions..." className="w-full pl-12 sm:pl-14 pr-4 sm:pr-6 py-3 sm:py-5 bg-white rounded-2xl sm:rounded-3xl shadow-sm outline-none font-bold focus:ring-2 ring-maroon/10 transition-all text-sm sm:text-base" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                  {colleges.map(c => (
+                  {COLLEGES.map(c => (
                     <button key={c} onClick={() => setFilterCollege(c)} className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-full font-black text-[9px] sm:text-[10px] uppercase transition-all duration-300 whitespace-nowrap flex-shrink-0 ${filterCollege === c ? 'bg-maroon text-white shadow-lg scale-105' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50 hover:border-maroon/20'}`}>{c}</button>
                   ))}
                 </div>
@@ -122,19 +160,22 @@ const AdminDashboard = ({ user, role }) => {
               {filteredMoas.length > 0 ? (
                 <div className="bg-white rounded-2xl sm:rounded-3xl lg:rounded-[40px] shadow-lg sm:shadow-xl border border-maroon/5 overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs sm:text-sm">
-                    <thead className="bg-slate-50/50 font-black text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-widest">
-                      <tr><th className="p-3 sm:p-6 lg:p-8">Partner</th><th className="p-3 sm:p-6 lg:p-8">College</th><th className="p-3 sm:p-6 lg:p-8">Status</th>{(isAdmin || isStaff) && <th className="p-3 sm:p-6 lg:p-8 text-right">Actions</th>}</tr>
+                    <thead className="bg-slate-50/50 font-black text-[7px] sm:text-[9px] text-slate-400 uppercase tracking-widest">
+                      <tr><th className="p-2 sm:p-4 lg:p-6">Partner</th><th className="p-2 sm:p-4 lg:p-6">Contact</th><th className="p-2 sm:p-4 lg:p-6 hidden sm:table-cell">Industry</th><th className="p-2 sm:p-4 lg:p-6">College</th><th className="p-2 sm:p-4 lg:p-6 hidden lg:table-cell">Effective</th><th className="p-2 sm:p-4 lg:p-6">Status</th>{(isAdmin || isStaff) && <th className="p-2 sm:p-4 lg:p-6 text-right">Actions</th>}</tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {filteredMoas.map((moa, index) => (
                         <tr key={moa.id} className="hover:bg-slate-50 transition-all duration-300 font-bold group animate-in fade-in slide-in-from-bottom-2 duration-700" style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}>
-                          <td className="p-3 sm:p-6 lg:p-8"><div className="font-black text-slate-800 text-sm sm:text-lg group-hover:text-maroon transition-all duration-300 line-clamp-1">{moa.companyName}</div><div className="text-[8px] sm:text-[10px] text-slate-300 font-mono tracking-widest line-clamp-1">{moa.hteId}</div></td>
-                          <td className="p-3 sm:p-6 lg:p-8 text-slate-500 uppercase text-xs sm:text-xs whitespace-nowrap">{moa.college}</td>
-                          <td className="p-3 sm:p-6 lg:p-8"><StatusBadge status={moa.status} /></td>
+                          <td className="p-2 sm:p-4 lg:p-6"><div className="font-black text-slate-800 text-xs sm:text-sm lg:text-base group-hover:text-maroon transition-all duration-300 line-clamp-1">{moa.companyName}</div><div className="text-[7px] sm:text-[9px] text-slate-300 font-mono tracking-widest line-clamp-1">{moa.hteId}</div></td>
+                          <td className="p-2 sm:p-4 lg:p-6 text-slate-600 text-xs sm:text-sm"><div className="font-bold">{moa.contactPerson || '-'}</div><div className="text-[7px] sm:text-[8px] text-slate-400 truncate">{moa.contactEmail || '-'}</div></td>
+                          <td className="p-2 sm:p-4 lg:p-6 text-slate-500 text-xs sm:text-sm whitespace-nowrap hidden sm:table-cell">{moa.industry || '-'}</td>
+                          <td className="p-2 sm:p-4 lg:p-6 text-slate-500 uppercase text-xs sm:text-xs whitespace-nowrap">{moa.college}</td>
+                          <td className="p-2 sm:p-4 lg:p-6 text-slate-500 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">{moa.effectiveDate ? new Date(moa.effectiveDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: '2-digit' }) : '-'}</td>
+                          <td className="p-2 sm:p-4 lg:p-6"><StatusBadge status={moa.status} /></td>
                           {(isAdmin || isStaff) && (
-                            <td className="p-3 sm:p-6 lg:p-8 text-right space-x-1 sm:space-x-2 flex justify-end">
-                              <button onClick={() => { setEditId(moa.id); setFormData(moa); setIsModalOpen(true); }} className="px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-blue-600 bg-blue-50 hover:bg-blue-100 active:scale-95 transition-all duration-300 text-lg" title="Edit"><span className="material-symbols-outlined !text-lg">edit</span></button>
-                              {isAdmin && <button onClick={() => handleArchive(moa.id, moa.companyName)} className="px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-red-600 bg-red-50 hover:bg-red-100 active:scale-95 transition-all duration-300 text-lg" title="Archive"><span className="material-symbols-outlined !text-lg">archive</span></button>}
+                            <td className="p-2 sm:p-4 lg:p-6 text-right space-x-1 sm:space-x-2 flex justify-end">
+                              <button onClick={() => { setEditId(moa.id); setFormData(moa); setIsModalOpen(true); }} className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg font-black text-blue-600 bg-blue-50 hover:bg-blue-100 active:scale-95 transition-all duration-300 text-sm sm:text-base" title="Edit"><span className="material-symbols-outlined !text-base sm:!text-lg">edit</span></button>
+                              {isAdmin && <button onClick={() => handleArchive(moa.id, moa.companyName)} className="px-2 sm:px-3 py-1 sm:py-2 rounded-lg font-black text-red-600 bg-red-50 hover:bg-red-100 active:scale-95 transition-all duration-300 text-sm sm:text-base" title="Archive"><span className="material-symbols-outlined !text-base sm:!text-lg">archive</span></button>}
                             </td>
                           )}
                         </tr>
@@ -210,12 +251,44 @@ const AdminDashboard = ({ user, role }) => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-4 z-[60] animate-in fade-in duration-400">
           <form onSubmit={handleSave} className="bg-white w-full max-w-sm sm:max-w-md lg:max-w-xl rounded-3xl sm:rounded-[40px] lg:rounded-[50px] p-6 sm:p-10 lg:p-12 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-10 duration-500 ease-out max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl sm:text-2xl lg:text-3xl font-black mb-6 sm:mb-8 tracking-tighter">{editId ? 'Update' : 'New'} Agreement</h3>
-            <div className="space-y-4 sm:space-y-5">
-              <InputField label="HTE ID" value={formData.hteId} onChange={v => setFormData({...formData, hteId: v})} placeholder="e.g. 2026-CICS-001" />
-              <InputField label="Partner Institution" value={formData.companyName} onChange={v => setFormData({...formData, companyName: v})} placeholder="e.g. Microsoft Philippines" />
+            <div className="space-y-4 sm:space-y-5 max-h-[70vh] overflow-y-auto">
+              {/* Row 1: HTE ID & Company Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <SelectField label="Assigned College" value={formData.college} options={colleges.filter(c => c !== "ALL")} onChange={v => setFormData({...formData, college: v})} />
-                <SelectField label="Process Status" value={formData.status} options={["PROCESSING", "APPROVED"]} onChange={v => setFormData({...formData, status: v})} />
+                <InputField label="HTE ID" value={formData.hteId} onChange={v => setFormData({...formData, hteId: v})} placeholder="e.g. 2026-CICS-001" />
+                <InputField label="Partner Institution" value={formData.companyName} onChange={v => setFormData({...formData, companyName: v})} placeholder="e.g. Microsoft Philippines" />
+              </div>
+              
+              {/* Row 2: Address */}
+              <InputField label="Address of Company" value={formData.address} onChange={v => setFormData({...formData, address: v})} placeholder="e.g. 123 Business Ave, Manila" />
+              
+              {/* Row 3: Contact Person & Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <InputField label="Contact Person" value={formData.contactPerson} onChange={v => setFormData({...formData, contactPerson: v})} placeholder="Full name" />
+                <InputField label="Contact Email" value={formData.contactEmail} onChange={v => setFormData({...formData, contactEmail: v})} placeholder="email@example.com" />
+              </div>
+              
+              {/* Row 4: Industry & Effective Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <SelectField label="Type of Industry" value={formData.industry} options={INDUSTRIES} onChange={v => setFormData({...formData, industry: v})} />
+                <InputField label="Effective Date" type="date" value={formData.effectiveDate} onChange={v => setFormData({...formData, effectiveDate: v})} />
+              </div>
+              
+              {/* Row 5: Expiry Date & Endorsed By */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <InputField label="Expiry Date" type="date" value={formData.expiryDate} onChange={v => setFormData({...formData, expiryDate: v})} />
+                <InputField label="Endorsed by College" value={formData.endorsedBy} onChange={v => setFormData({...formData, endorsedBy: v})} placeholder="College name" />
+              </div>
+              
+              {/* Row 6: College & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <SelectField label="Assigned College" value={formData.college} options={COLLEGES.filter(c => c !== "ALL")} onChange={v => setFormData({...formData, college: v})} />
+                <SelectField label="Status" value={formData.status} options={MOA_STATUSES} onChange={v => setFormData({...formData, status: v})} />
+              </div>
+              
+              {/* Row 7: Notes */}
+              <div className="text-left">
+                <label className="text-[8px] sm:text-[10px] font-black text-slate-300 uppercase ml-2 mb-1 block">Notes</label>
+                <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Additional notes..." className="w-full p-3 sm:p-4 bg-slate-50 rounded-lg sm:rounded-2xl outline-none font-bold text-slate-700 border border-transparent focus:border-maroon/10 focus:bg-white transition-all text-sm h-24" />
               </div>
             </div>
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 sm:gap-6 mt-8 sm:mt-12">
@@ -230,69 +303,113 @@ const AdminDashboard = ({ user, role }) => {
 };
 
 // --- Sub-components for absolute cleanliness ---
-const SidebarBtn = ({ active, icon, label, onClick }) => (
+const SidebarBtn = memo(({ active, icon, label, onClick }) => (
   <button onClick={onClick} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-black transition-all duration-300 ease-out ${active ? 'bg-maroon text-white shadow-xl shadow-maroon/20 translate-x-2' : 'text-slate-400 hover:bg-maroon/5 hover:text-maroon hover:translate-x-1'}`}>
     <span className="material-symbols-outlined !text-xl">{icon}</span> {label}
   </button>
-);
+));
 
-const StatusBadge = ({ status }) => (
-  <span className={`text-[9px] font-black px-4 py-2 rounded-full uppercase tracking-tighter ${status?.includes('APPROVED') ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-    {status}
-  </span>
-);
+const StatusBadge = memo(({ status }) => {
+  let bgColor = 'bg-slate-100 text-slate-700';
+  if (status?.includes('APPROVED')) bgColor = 'bg-green-100 text-green-700';
+  else if (status?.includes('PROCESSING')) bgColor = 'bg-blue-100 text-blue-700';
+  else if (status?.includes('EXPIRING')) bgColor = 'bg-orange-100 text-orange-700';
+  else if (status?.includes('EXPIRED')) bgColor = 'bg-red-100 text-red-700';
+  
+  const shortStatus = status?.split(':')[0] || status;
+  return (
+    <span className={`text-[7px] sm:text-[9px] font-black px-2 sm:px-3 py-1 sm:py-2 rounded-full uppercase tracking-tighter whitespace-nowrap block w-fit line-clamp-1 ${bgColor}`}>
+      {shortStatus}
+    </span>
+  );
+});
 
-const InputField = ({ label, value, onChange, placeholder }) => (
+const InputField = memo(({ label, value, onChange, placeholder, type = 'text' }) => (
   <div className="text-left">
     <label className="text-[8px] sm:text-[10px] font-black text-slate-300 uppercase ml-2 mb-1 block">{label}</label>
-    <input required value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full p-3 sm:p-4 bg-slate-50 rounded-lg sm:rounded-2xl outline-none font-bold text-slate-700 border border-transparent focus:border-maroon/10 focus:bg-white transition-all text-sm" />
+    <input required type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full p-3 sm:p-4 bg-slate-50 rounded-lg sm:rounded-2xl outline-none font-bold text-slate-700 border border-transparent focus:border-maroon/10 focus:bg-white transition-all text-sm" />
   </div>
-);
+));
 
-const SelectField = ({ label, value, options, onChange }) => (
+const SelectField = memo(({ label, value, options, onChange }) => (
   <div className="text-left">
     <label className="text-[8px] sm:text-[10px] font-black text-slate-300 uppercase ml-2 mb-1 block">{label}</label>
     <select value={value} onChange={e => onChange(e.target.value)} className="w-full p-3 sm:p-4 bg-slate-50 rounded-lg sm:rounded-2xl outline-none font-bold text-slate-700 text-sm">
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
   </div>
-);
+));
 
-const AuditTable = ({ logs }) => (
+const AuditTable = memo(({ logs }) => (
   <div className="space-y-4 sm:space-y-6">
     {logs.length > 0 ? (
-      <div className="bg-white rounded-2xl sm:rounded-3xl lg:rounded-[40px] shadow-lg sm:shadow-xl border border-maroon/5 overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs sm:text-sm">
-          <thead className="bg-slate-50/50 font-black text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-widest">
-            <tr>
-              <th className="p-3 sm:p-6 lg:p-8 whitespace-nowrap">User</th>
-              <th className="p-3 sm:p-6 lg:p-8 whitespace-nowrap">Action</th>
-              <th className="p-3 sm:p-6 lg:p-8 whitespace-nowrap">Target</th>
-              <th className="p-3 sm:p-6 lg:p-8 whitespace-nowrap text-right">Timestamp</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {logs.map(log => (
-              <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                <td className="p-3 sm:p-6 lg:p-8">
-                  <div className="font-black text-slate-800 text-xs sm:text-sm line-clamp-1">{log.userName}</div>
-                  <div className="text-[7px] sm:text-[10px] text-slate-300 font-mono truncate">{log.userEmail}</div>
-                </td>
-                <td className="p-3 sm:p-6 lg:p-8">
-                  <span className={`text-[7px] sm:text-[9px] font-black px-2 sm:px-4 py-1 sm:py-2 rounded-full uppercase tracking-tighter whitespace-nowrap block w-min ${                    log.operation === 'INSERT' ? 'bg-green-100 text-green-700' :
-                    log.operation === 'EDIT' ? 'bg-blue-100 text-blue-700' :
-                    log.operation === 'ARCHIVE' ? 'bg-red-100 text-red-700' :
-                    'bg-slate-100 text-slate-700'
-                  }`}>
-                    {log.operation}
-                  </span>
-                </td>
-                <td className="p-3 sm:p-6 lg:p-8 text-slate-600 font-bold text-xs sm:text-sm truncate">{log.details || log.targetHte}</td>
-                <td className="p-3 sm:p-6 lg:p-8 text-slate-400 text-[10px] sm:text-sm whitespace-nowrap text-right">{log.timestamp ? new Date(log.timestamp.toDate()).toLocaleString() : 'N/A'}</td>
+      <div className="bg-white rounded-2xl sm:rounded-3xl lg:rounded-[40px] shadow-lg sm:shadow-xl border border-maroon/5 overflow-hidden">
+        {/* Mobile View: Stacked Cards */}
+        <div className="block sm:hidden divide-y divide-slate-50">
+          {logs.map((log) => (
+            <div key={log.id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/50 transition-colors">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-black text-slate-800 text-sm">{log.userName}</div>
+                  <div className="text-[9px] text-slate-400 font-mono">{log.userEmail}</div>
+                </div>
+                <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-tighter whitespace-nowrap ${
+                  log.operation === 'INSERT' ? 'bg-green-100 text-green-700' :
+                  log.operation === 'EDIT' ? 'bg-blue-100 text-blue-700' :
+                  log.operation === 'ARCHIVE' ? 'bg-red-100 text-red-700' :
+                  'bg-slate-100 text-slate-700'
+                }`}>
+                  {log.operation}
+                </span>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Target</p>
+                <p className="font-bold text-slate-700 text-xs line-clamp-2">{log.details || log.targetHte}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-[9px] font-bold text-slate-300 bg-white border border-slate-100 px-2 py-1 rounded-lg">
+                  {log.timestamp ? new Date(log.timestamp.toDate()).toLocaleString() : 'N/A'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead className="bg-slate-50/50 font-black text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-widest">
+              <tr>
+                <th className="p-3 sm:p-6 lg:p-8 whitespace-nowrap">User</th>
+                <th className="p-3 sm:p-6 lg:p-8 whitespace-nowrap">Action</th>
+                <th className="p-3 sm:p-6 lg:p-8 whitespace-nowrap">Target</th>
+                <th className="p-3 sm:p-6 lg:p-8 whitespace-nowrap text-right">Timestamp</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {logs.map(log => (
+                <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="p-3 sm:p-6 lg:p-8">
+                    <div className="font-black text-slate-800 text-xs sm:text-sm line-clamp-1">{log.userName}</div>
+                    <div className="text-[7px] sm:text-[10px] text-slate-300 font-mono truncate">{log.userEmail}</div>
+                  </td>
+                  <td className="p-3 sm:p-6 lg:p-8">
+                    <span className={`text-[7px] sm:text-[9px] font-black px-2 sm:px-4 py-1 sm:py-2 rounded-full uppercase tracking-tighter whitespace-nowrap block w-min ${
+                      log.operation === 'INSERT' ? 'bg-green-100 text-green-700' :
+                      log.operation === 'EDIT' ? 'bg-blue-100 text-blue-700' :
+                      log.operation === 'ARCHIVE' ? 'bg-red-100 text-red-700' :
+                      'bg-slate-100 text-slate-700'
+                    }`}>
+                      {log.operation}
+                    </span>
+                  </td>
+                  <td className="p-3 sm:p-6 lg:p-8 text-slate-600 font-bold text-xs sm:text-sm truncate max-w-[200px]">{log.details || log.targetHte}</td>
+                  <td className="p-3 sm:p-6 lg:p-8 text-slate-400 text-[10px] sm:text-sm whitespace-nowrap text-right">{log.timestamp ? new Date(log.timestamp.toDate()).toLocaleString() : 'N/A'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     ) : (
       <div className="py-12 sm:py-20 text-center space-y-4 bg-white/50 rounded-2xl sm:rounded-3xl lg:rounded-[40px] border-2 border-dashed border-slate-200">
@@ -301,6 +418,6 @@ const AuditTable = ({ logs }) => (
       </div>
     )}
   </div>
-);
+));
 
-export default AdminDashboard;
+export { AdminDashboard };
