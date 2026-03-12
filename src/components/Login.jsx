@@ -41,8 +41,7 @@ const Login = ({ onLoginSuccess }) => {
             <div className="text-maroon">
               <span className="material-symbols-outlined !text-xl sm:!text-2xl">account_balance</span>
             </div>
-            <span className="font-bold text-sm sm:text-lg text-maroon tracking-tight uppercase">NEU</span>
-            <span className="hidden sm:inline font-bold text-sm sm:text-lg text-maroon tracking-tight uppercase">University</span>
+            <span className="font-bold text-sm sm:text-lg text-maroon tracking-tight uppercase">New Era University</span>
           </div>
           <button 
             onClick={() => setIsHelpOpen(true)}
