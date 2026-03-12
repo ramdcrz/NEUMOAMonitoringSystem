@@ -12,29 +12,37 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        // Fetch the role from Firestore
-        const userDoc = await getDoc(doc(db, "users", currentUser.email));
-        if (userDoc.exists()) {
-          setRole(userDoc.data().role); // 'admin' or 'staff'
-        } else if (currentUser.email.endsWith("@neu.edu.ph")) {
-          setRole("student");
+      try {
+        if (currentUser) {
+          const email = currentUser.email.toLowerCase();
+          const userDoc = await getDoc(doc(db, "users", email));
+          
+          if (userDoc.exists()) {
+            setRole(userDoc.data().role);
+          } else if (email.endsWith("@neu.edu.ph")) {
+            setRole(email.split('@')[0].includes('.') ? "student" : "staff");
+          } else {
+            setRole("guest");
+          }
+          setUser(currentUser);
+        } else {
+          setUser(null);
+          setRole(null);
         }
-        setUser(currentUser);
-      } else {
-        setUser(null);
-        setRole(null);
+      } catch (err) {
+        console.error("Auth Init Error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  if (loading) return <div className="h-screen flex items-center justify-center font-black text-maroon">Initializing Eagle Portal...</div>;
+  if (loading) return <div className="h-screen bg-pattern flex items-center justify-center font-black text-maroon text-xl animate-pulse">Initializing Eagle Portal...</div>;
 
   return (
     <div>
-      {!user ? (
+      {!user || role === "guest" ? (
         <Login onLoginSuccess={(u, r) => { setUser(u); setRole(r); }} />
       ) : (
         <AdminDashboard user={user} role={role} />
