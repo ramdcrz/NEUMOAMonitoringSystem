@@ -62,7 +62,7 @@ function App() {
   // Professional Loading State (matches your Portal aesthetic)
   if (loading) {
     return (
-      <div className="h-screen bg-pattern flex flex-col items-center justify-center font-display">
+      <div className="h-screen bg-pattern flex flex-col items-center justify-center font-display animate-in fade-in zoom-in-95 duration-700">
         <div className="w-16 h-16 border-4 border-maroon/10 border-t-maroon rounded-full animate-spin mb-6"></div>
         <p className="font-black text-maroon text-xs uppercase tracking-[0.5em] animate-pulse">
           Initializing Eagle Portal
