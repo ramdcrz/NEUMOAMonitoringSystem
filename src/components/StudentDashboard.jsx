@@ -11,93 +11,109 @@ export const StudentDashboard = ({ user }) => {
   useEffect(() => {
     const unsubscribe = subscribeToMOAs(docs => {
       // Filter to show only APPROVED MOAs
-      const approvedMoas = docs.filter(moa => moa.status?.includes('APPROVED'));
+      const approvedMoas = docs.filter(moa => String(moa.status || '').includes('APPROVED'));
       setMoas(approvedMoas);
       setLoading(false);
     });
     return unsubscribe;
   }, []);
 
-  const filteredMoas = moas.filter(moa =>
-    moa.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    moa.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    moa.address?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMoas = moas.filter(moa => {
+    const lowerSearch = searchTerm.toLowerCase();
+    return String(moa.companyName || '').toLowerCase().includes(lowerSearch) ||
+           String(moa.contactPerson || '').toLowerCase().includes(lowerSearch) ||
+           String(moa.address || '').toLowerCase().includes(lowerSearch);
+  });
 
   return (
-    <div className="flex h-screen bg-pattern font-display overflow-hidden flex-col lg:flex-row">
+    <div className="flex min-h-screen bg-pattern antialiased flex-col lg:flex-row relative">
+
+      {/* Animated Background Orbs */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-maroon/20 blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[35vw] h-[35vw] rounded-full bg-blue-500/15 blur-[120px] animate-pulse" style={{ animationDelay: '2s', animationDuration: '6s' }}></div>
+      </div>
+
       {/* Header */}
-      <div className="w-full bg-white/90 backdrop-blur-md border-b border-maroon/10 px-6 sm:px-8 py-5 sm:py-6 lg:hidden flex items-center justify-between shrink-0">
-        <h1 className="font-black text-lg sm:text-2xl text-slate-900">Student Portal</h1>
+      <div className="w-full bg-white/70 backdrop-blur-xl border-b border-black/5 px-6 sm:px-8 py-4 sm:py-5 lg:hidden flex items-center justify-between shrink-0 z-30 sticky top-0 shadow-sm transition-all">
+        <h1 className="font-bold tracking-tight text-lg text-slate-900">Student Portal</h1>
         <div className="text-right">
-          <p className="text-xs sm:text-sm font-black text-slate-600">{user?.email?.split('@')[0].toUpperCase() || 'STUDENT'}</p>
-          <p className="text-[8px] sm:text-[9px] text-slate-400">{user?.email}</p>
+          <p className="text-sm font-bold tracking-tight text-slate-800">{(user?.email || '').split('@')[0]?.toUpperCase() || 'STUDENT'}</p>
+          <p className="text-[10px] font-bold text-slate-500">{user?.email}</p>
         </div>
       </div>
 
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex w-72 bg-white/90 backdrop-blur-md border-r border-maroon/10 p-8 flex-col shrink-0">
-        <div className="flex items-center gap-4 mb-12">
-          <div className="w-10 h-10 bg-maroon rounded-xl text-white flex items-center justify-center shadow-lg"><span className="material-symbols-outlined">school</span></div>
+      <aside className="hidden lg:flex w-72 bg-white/70 backdrop-blur-2xl border-r border-black/5 p-8 flex-col shrink-0 z-10 transition-all lg:sticky lg:top-0 lg:h-screen">
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-9 h-9 bg-maroon rounded-xl text-white flex items-center justify-center shadow-sm"><span className="material-symbols-outlined !text-xl">school</span></div>
           <div className="min-w-0">
-            <h1 className="font-black text-xl text-slate-900 truncate">Portal</h1>
-            <p className="text-[9px] font-black text-maroon uppercase tracking-[0.2em] opacity-60">STUDENT</p>
+            <h1 className="font-bold tracking-tight text-xl text-slate-900 truncate">Portal</h1>
+            <p className="text-[10px] font-bold text-maroon uppercase tracking-wider">STUDENT</p>
           </div>
         </div>
         <nav className="space-y-3 flex-grow">
-          <div className="px-4 py-3 rounded-2xl bg-maroon text-white font-black flex items-center gap-3 shadow-xl shadow-maroon/20">
-            <span className="material-symbols-outlined">list</span> Agreements
+          <div className="px-4 py-3 rounded-xl bg-maroon text-white font-bold flex items-center gap-3 shadow-md hover:shadow-lg hover:scale-[1.02] cursor-pointer transition-all duration-300">
+            <span className="material-symbols-outlined !text-xl">list</span> Agreements
           </div>
         </nav>
-        <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest opacity-60 mb-4">Account</div>
-        <div className="text-xs text-slate-600 font-bold mb-4">{user?.email}</div>
-        <button onClick={() => signOut(auth)} className="p-4 bg-slate-50 rounded-2xl font-black text-slate-400 hover:text-maroon active:scale-95 flex items-center gap-3 transition-all duration-300 w-full justify-center"><span className="material-symbols-outlined">logout</span> Sign Out</button>
+        <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-3 px-2">Account</div>
+        <div className="text-sm text-slate-800 font-bold mb-4 px-2 truncate">{user?.email}</div>
+        <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 hover:shadow-sm hover:-translate-y-0.5 rounded-xl font-bold text-slate-700 active:scale-95 flex items-center justify-center gap-2 transition-all duration-300 w-full"><span className="material-symbols-outlined !text-lg">logout</span> Sign Out</button>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <main className="flex-1 flex flex-col min-w-0 w-full">
+        <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-5">
           {/* Search Bar */}
-          <div className="bg-white/50 rounded-2xl sm:rounded-3xl lg:rounded-[40px] p-6 sm:p-8 lg:p-10 backdrop-blur-sm border border-slate-100 shadow-lg shadow-maroon/5">
-            <div className="flex items-center gap-2 sm:gap-4 bg-slate-50 rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4">
-              <span className="material-symbols-outlined text-slate-400 !text-lg sm:!text-2xl">search</span>
+          <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all duration-500">
+            <div className="relative group flex items-center gap-3 bg-black/[0.03] border border-transparent focus-within:bg-white focus-within:border-maroon/20 focus-within:ring-4 focus-within:ring-maroon/10 focus-within:-translate-y-1 focus-within:shadow-md rounded-xl px-4 py-3 transition-all duration-300">
+              <span className="material-symbols-outlined text-slate-400 !text-xl group-focus-within:text-maroon transition-colors">search</span>
               <input
                 type="text"
                 placeholder="Search by company name, contact person..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full outline-none bg-transparent font-bold text-slate-800 placeholder-slate-400 text-sm sm:text-base"
+                className="w-full outline-none bg-transparent font-medium text-slate-800 placeholder:text-slate-400 text-sm sm:text-base pr-8"
               />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="absolute right-4 text-slate-400 hover:text-maroon transition-colors flex items-center justify-center hover:scale-110 active:scale-95">
+                  <span className="material-symbols-outlined !text-lg">close</span>
+                </button>
+              )}
             </div>
           </div>
 
           {/* MOAs Grid/Table */}
           {!loading && filteredMoas.length > 0 ? (
-            <div className="bg-white/50 rounded-2xl sm:rounded-3xl lg:rounded-[40px] overflow-hidden backdrop-blur-sm border border-slate-100 shadow-lg shadow-maroon/5">
+            <div className="bg-white/70 rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all flex flex-col">
               {/* Mobile View: Cards */}
-              <div className="sm:hidden space-y-3 p-4">
+              <div className="sm:hidden divide-y divide-black/5 max-h-[65vh] overflow-y-auto custom-scrollbar">
                 {filteredMoas.map((moa, index) => (
                   <div
                     key={moa.id}
-                    className="bg-white rounded-xl p-4 border border-slate-100 hover:border-maroon/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 duration-700"
+                    className="p-5 hover:bg-white/80 hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 rounded-xl cursor-pointer"
                     style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}
                   >
-                    <div className="font-black text-slate-800 text-base mb-2 line-clamp-1">{moa.companyName}</div>
-                    <div className="text-[11px] text-slate-500 font-bold mb-3 space-y-1">
-                      <div><span className="text-slate-400">Address:</span> {moa.address || 'N/A'}</div>
-                      <div><span className="text-slate-400">Contact:</span> {moa.contactPerson || 'N/A'}</div>
-                      <div><span className="text-slate-400">Email:</span> {moa.contactEmail || 'N/A'}</div>
-                      <div><span className="text-slate-400">Effective:</span> {moa.effectiveDate ? new Date(moa.effectiveDate).toLocaleDateString() : 'N/A'}</div>
+                    <div className="font-semibold tracking-tight text-slate-800 text-base mb-2 line-clamp-1">{moa.companyName}</div>
+                    <div className="text-xs text-slate-600 font-medium mb-4 space-y-1.5">
+                      <div><span className="text-slate-400 mr-1">Address:</span> {moa.address || 'N/A'}</div>
+                      <div><span className="text-slate-400 mr-1">Contact:</span> {moa.contactPerson || 'N/A'}</div>
+                      <div><span className="text-slate-400 mr-1">Email:</span> {moa.contactEmail || 'N/A'}</div>
+                      <div><span className="text-slate-400 mr-1">Effective:</span> {moa.effectiveDate ? new Date(moa.effectiveDate).toLocaleDateString() : 'N/A'}</div>
                     </div>
-                    <span className="text-[10px] font-black px-3 py-1 rounded-full bg-green-100 text-green-700 inline-block">APPROVED</span>
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-md bg-green-100/50 text-green-700 uppercase tracking-wide w-fit">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                      APPROVED
+                    </span>
                   </div>
                 ))}
               </div>
 
               {/* Desktop View: Table */}
-              <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs sm:text-sm">
-                  <thead className="bg-slate-50/50 font-black text-[8px] sm:text-[10px] text-slate-400 uppercase tracking-widest">
+              <div className="hidden sm:block overflow-x-auto custom-scrollbar flex-1">
+                <table className="w-full text-left border-collapse text-xs sm:text-sm relative">
+                  <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md font-bold text-[11px] text-slate-500 uppercase tracking-wider border-b border-black/5 shadow-sm">
                     <tr>
                       <th className="p-4 sm:p-6">Partner Institution</th>
                       <th className="p-4 sm:p-6">Address</th>
@@ -106,18 +122,18 @@ export const StudentDashboard = ({ user }) => {
                       <th className="p-4 sm:p-6 hidden lg:table-cell text-right">Effective Date</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-black/5">
                     {filteredMoas.map((moa, index) => (
                       <tr
                         key={moa.id}
-                        className="hover:bg-slate-50 transition-all duration-300 font-bold animate-in fade-in slide-in-from-bottom-2 duration-700"
+                        className="hover:bg-white/60 hover:shadow-sm transition-all duration-300 font-bold animate-in fade-in cursor-default"
                         style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}
                       >
-                        <td className="p-4 sm:p-6"><div className="font-black text-slate-800 text-sm">{moa.companyName}</div></td>
-                        <td className="p-4 sm:p-6 text-slate-600 text-xs sm:text-sm line-clamp-1">{moa.address || 'N/A'}</td>
-                        <td className="p-4 sm:p-6 text-slate-600 text-xs sm:text-sm hidden lg:table-cell">{moa.contactPerson || 'N/A'}</td>
-                        <td className="p-4 sm:p-6 text-slate-600 text-xs sm:text-sm hidden xl:table-cell line-clamp-1">{moa.contactEmail || 'N/A'}</td>
-                        <td className="p-4 sm:p-6 text-slate-500 text-xs sm:text-sm hidden lg:table-cell text-right">{moa.effectiveDate ? new Date(moa.effectiveDate).toLocaleDateString('en-PH', { month: 'short', day: '2-digit', year: '2-digit' }) : 'N/A'}</td>
+                        <td className="p-4 sm:p-6"><div className="font-bold text-slate-900 text-sm">{moa.companyName}</div></td>
+                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm line-clamp-1">{moa.address || 'N/A'}</td>
+                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden lg:table-cell">{moa.contactPerson || 'N/A'}</td>
+                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden xl:table-cell line-clamp-1">{moa.contactEmail || 'N/A'}</td>
+                        <td className="p-4 sm:p-6 text-slate-600 text-xs sm:text-sm hidden lg:table-cell text-right">{moa.effectiveDate ? new Date(moa.effectiveDate).toLocaleDateString('en-PH', { month: 'short', day: '2-digit', year: '2-digit' }) : 'N/A'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -125,13 +141,20 @@ export const StudentDashboard = ({ user }) => {
               </div>
             </div>
           ) : !loading ? (
-            <div className="py-20 text-center space-y-4 bg-white/50 rounded-3xl border-2 border-dashed border-slate-200">
-              <span className="material-symbols-outlined !text-6xl text-slate-200 block">search_off</span>
-              <p className="text-slate-400 font-black uppercase text-xs tracking-widest">No approved agreements found</p>
+            <div className="py-20 text-center space-y-4 bg-white/70 backdrop-blur-2xl rounded-3xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all group hover:bg-white/80">
+              <div className="w-20 h-20 bg-slate-100/50 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                <span className="material-symbols-outlined !text-4xl text-slate-400">search_off</span>
+              </div>
+              <p className="text-slate-500 font-bold text-sm">No approved agreements found</p>
             </div>
           ) : (
-            <div className="py-20 text-center">
-              <div className="inline-block w-12 h-12 border-4 border-slate-200 border-t-maroon rounded-full animate-spin"></div>
+            <div className="py-20 text-center flex flex-col items-center justify-center space-y-4 bg-white/40 backdrop-blur-xl rounded-3xl border border-black/5 animate-pulse">
+              <div className="relative w-16 h-16 flex items-center justify-center">
+                <div className="absolute inset-0 border-4 border-slate-200/50 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-maroon border-t-transparent rounded-full animate-spin"></div>
+                <span className="material-symbols-outlined text-maroon !text-xl animate-pulse">description</span>
+              </div>
+              <p className="text-slate-500 font-bold text-sm tracking-wide">Fetching agreements...</p>
             </div>
           )}
         </div>

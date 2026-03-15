@@ -38,41 +38,41 @@ export const StatisticsDashboard = ({ user }) => {
   });
 
   const stats = {
-    active: filteredMoas.filter(m => m.status?.includes('APPROVED')).length,
-    processing: filteredMoas.filter(m => m.status?.includes('PROCESSING')).length,
-    expired: filteredMoas.filter(m => m.status?.includes('EXPIRED')).length,
-    expiring: filteredMoas.filter(m => m.status?.includes('EXPIRING')).length,
+    active: filteredMoas.filter(m => String(m.status || '').includes('APPROVED')).length,
+    pending: filteredMoas.filter(m => String(m.status || '').includes('PENDING')).length,
+    expired: filteredMoas.filter(m => String(m.status || '').includes('EXPIRED')).length,
+    expiring: filteredMoas.filter(m => String(m.status || '').includes('EXPIRING')).length,
     total: filteredMoas.length
   };
 
   const StatCard = memo(({ icon, label, value, color, bgColor }) => (
-    <div className={`${bgColor} rounded-3xl p-6 sm:p-8 border-2 border-slate-100 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-500`}>
+    <div className={`bg-white/70 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] hover:bg-white/90 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2`}>
       <div className="flex items-start justify-between mb-4">
         <div>
-          <p className="text-slate-500 font-black text-xs sm:text-sm uppercase tracking-widest mb-1">{label}</p>
-          <p className={`text-3xl sm:text-5xl font-black ${color}`}>{value}</p>
+          <p className="text-slate-500 font-bold text-[11px] uppercase tracking-wider mb-1">{label}</p>
+          <p className={`text-3xl sm:text-5xl font-bold tracking-tight ${color}`}>{value}</p>
         </div>
-        <span className={`material-symbols-outlined !text-3xl sm:!text-4xl ${color}`}>{icon}</span>
+        <div className={`p-3 rounded-xl ${bgColor} flex items-center justify-center`}><span className={`material-symbols-outlined !text-3xl ${color}`}>{icon}</span></div>
       </div>
-      <p className="text-[10px] sm:text-xs text-slate-400 font-bold">Total MOAs: {stats.total}</p>
+      <p className="text-[11px] text-slate-500 font-bold">Total MOAs: {stats.total}</p>
     </div>
   ));
 
   return (
-    <div className="flex h-screen bg-pattern font-display overflow-hidden flex-col lg:flex-row">
+    <div className="flex h-screen bg-pattern font-sans antialiased overflow-hidden flex-col lg:flex-row">
       {/* Header */}
-      <div className="w-full bg-white/90 backdrop-blur-md border-b border-maroon/10 px-6 sm:px-8 py-5 sm:py-6 lg:hidden flex items-center justify-between shrink-0">
-        <h1 className="font-black text-lg sm:text-2xl text-slate-900">Statistics</h1>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 hover:bg-slate-100 rounded-lg"><span className="material-symbols-outlined">menu</span></button>
+      <div className="w-full bg-white/70 backdrop-blur-2xl border-b border-black/5 px-6 sm:px-8 py-4 sm:py-5 lg:hidden flex items-center justify-between shrink-0 z-20 sticky top-0 transition-all">
+        <h1 className="font-bold tracking-tight text-lg text-slate-900">Statistics</h1>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-white border border-black/5 rounded-xl shadow-sm active:scale-95 transition-all"><span className="material-symbols-outlined text-slate-700">menu</span></button>
       </div>
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl z-50 lg:hidden">
-          <div className="bg-white rounded-2xl p-6 m-4 w-full max-w-xs shadow-2xl">
+          <div className="bg-white/90 backdrop-blur-3xl border border-black/5 rounded-3xl p-6 m-4 w-full max-w-xs shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in slide-in-from-top-4 duration-300">
             <nav className="space-y-3">
-              <div className="px-4 py-3 rounded-2xl bg-maroon text-white font-black text-left flex items-center gap-3">
-                <span className="material-symbols-outlined">bar_chart</span> Statistics
+              <div className="px-4 py-3 rounded-xl bg-maroon text-white font-bold text-left flex items-center gap-3 shadow-sm">
+                <span className="material-symbols-outlined !text-xl">bar_chart</span> Statistics
               </div>
             </nav>
           </div>
@@ -80,29 +80,30 @@ export const StatisticsDashboard = ({ user }) => {
       )}
 
       {/* Sidebar */}
-      <aside className="hidden lg:flex w-72 bg-white/90 backdrop-blur-md border-r border-maroon/10 p-8 flex-col shrink-0">
-        <div className="flex items-center gap-4 mb-12">
-          <div className="w-10 h-10 bg-maroon rounded-xl text-white flex items-center justify-center shadow-lg"><span className="material-symbols-outlined">school</span></div>
+      <aside className="hidden lg:flex w-72 bg-white/70 backdrop-blur-2xl border-r border-black/5 p-8 flex-col shrink-0 z-10 transition-all lg:sticky lg:top-0 lg:h-screen">
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-9 h-9 bg-maroon rounded-xl text-white flex items-center justify-center shadow-sm"><span className="material-symbols-outlined !text-xl">school</span></div>
           <div>
-            <h1 className="font-black text-xl text-slate-900">Portal</h1>
-            <p className="text-[9px] font-black text-maroon uppercase tracking-widest opacity-60">STATISTICS</p>
+            <h1 className="font-bold tracking-tight text-xl text-slate-900">Portal</h1>
+            <p className="text-[10px] font-bold text-maroon uppercase tracking-wider">STATISTICS</p>
           </div>
         </div>
         <nav className="space-y-3 flex-grow">
-          <div className="px-4 py-3 rounded-2xl bg-maroon text-white font-black flex items-center gap-3 shadow-xl shadow-maroon/20">
-            <span className="material-symbols-outlined">bar_chart</span> Analytics
+        <div className="px-4 py-3 rounded-xl bg-maroon text-white font-bold flex items-center gap-3 shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer transition-all duration-300">
+          <span className="material-symbols-outlined !text-xl animate-pulse">bar_chart</span> Analytics
           </div>
         </nav>
-        <div className="text-xs text-slate-600 font-bold mb-4">{user?.email}</div>
-        <button onClick={() => signOut(auth)} className="p-4 bg-slate-50 rounded-2xl font-black text-slate-400 hover:text-maroon active:scale-95 flex items-center gap-3 transition-all duration-300 w-full justify-center"><span className="material-symbols-outlined">logout</span> Sign Out</button>
+        <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-3 px-2">Account</div>
+        <div className="text-sm text-slate-800 font-bold mb-4 px-2 truncate">{user?.email}</div>
+      <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 hover:shadow-sm hover:-translate-y-0.5 rounded-xl font-bold text-slate-700 active:scale-95 flex items-center justify-center gap-2 transition-all duration-300 w-full"><span className="material-symbols-outlined !text-lg">logout</span> Sign Out</button>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <main className="flex-1 flex flex-col min-w-0 w-full">
+        <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-5">
           {/* Filters */}
-          <div className="bg-white/50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 backdrop-blur-sm border border-slate-100 shadow-lg shadow-maroon/5">
-            <p className="text-slate-600 font-black text-sm mb-4">Filters</p>
+          <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all">
+            <p className="text-slate-900 font-bold tracking-tight text-base mb-4">Filters</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <FilterSelect 
                 label="College" 
@@ -124,8 +125,9 @@ export const StatisticsDashboard = ({ user }) => {
               />
               <button 
                 onClick={() => { setSelectedCollege('All'); setStartDate(''); setEndDate(''); }}
-                className="col-span-full sm:col-span-1 lg:col-span-1 h-full px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-sm transition-all"
+                className="col-span-full sm:col-span-1 lg:col-span-1 h-[52px] self-end px-4 flex items-center justify-center gap-2 bg-white border border-black/5 hover:bg-slate-50 hover:text-maroon hover:shadow-md hover:-translate-y-0.5 text-slate-700 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 active:translate-y-0 group"
               >
+                <span className="material-symbols-outlined !text-lg group-hover:-rotate-180 transition-transform duration-500">restart_alt</span>
                 Reset Filters
               </button>
             </div>
@@ -137,57 +139,57 @@ export const StatisticsDashboard = ({ user }) => {
               icon="verified"
               label="Active MOAs"
               value={stats.active}
-              color="text-green-600"
-              bgColor="bg-green-50"
+              color="text-green-700"
+              bgColor="bg-green-100/50"
             />
             <StatCard
               icon="schedule"
-              label="Processing MOAs"
-              value={stats.processing}
-              color="text-blue-600"
-              bgColor="bg-blue-50"
+              label="Pending MOAs"
+              value={stats.pending}
+              color="text-blue-700"
+              bgColor="bg-blue-100/50"
             />
             <StatCard
               icon="event_busy"
               label="Expired MOAs"
               value={stats.expired}
-              color="text-red-600"
-              bgColor="bg-red-50"
+              color="text-red-700"
+              bgColor="bg-red-100/50"
             />
             <StatCard
               icon="schedule_close"
               label="Expiring Soon"
               value={stats.expiring}
-              color="text-orange-600"
-              bgColor="bg-orange-50"
+              color="text-orange-700"
+              bgColor="bg-orange-100/50"
             />
           </div>
 
           {/* Summary Card */}
-          <div className="bg-white/50 rounded-3xl p-8 backdrop-blur-sm border border-slate-100 shadow-lg shadow-maroon/5">
+          <div className="bg-white/70 rounded-3xl p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
               <div className="animate-in fade-in duration-500">
-                <p className="text-4xl font-black text-maroon mb-2">{stats.total}</p>
-                <p className="text-slate-600 font-bold text-sm uppercase tracking-widest">Total Agreements</p>
+                <p className="text-4xl font-bold tracking-tight text-maroon mb-2">{stats.total}</p>
+                <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Total Agreements</p>
               </div>
               <div className="animate-in fade-in duration-500" style={{ animationDelay: '100ms' }}>
-                <p className="text-4xl font-black text-green-600 mb-2">{Math.round((stats.active / stats.total) * 100) || 0}%</p>
-                <p className="text-slate-600 font-bold text-sm uppercase tracking-widest">Active Rate</p>
+                <p className="text-4xl font-bold tracking-tight text-green-700 mb-2">{Math.round((stats.active / stats.total) * 100) || 0}%</p>
+                <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Active Rate</p>
               </div>
               <div className="animate-in fade-in duration-500" style={{ animationDelay: '200ms' }}>
-                <p className="text-4xl font-black text-blue-600 mb-2">{Math.round((stats.processing / stats.total) * 100) || 0}%</p>
-                <p className="text-slate-600 font-bold text-sm uppercase tracking-widest">Processing Rate</p>
+                <p className="text-4xl font-bold tracking-tight text-blue-700 mb-2">{Math.round((stats.pending / stats.total) * 100) || 0}%</p>
+                <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Pending Rate</p>
               </div>
               <div className="animate-in fade-in duration-500" style={{ animationDelay: '300ms' }}>
-                <p className="text-4xl font-black text-red-600 mb-2">{Math.round((stats.expired / stats.total) * 100) || 0}%</p>
-                <p className="text-slate-600 font-bold text-sm uppercase tracking-widest">Expired Rate</p>
+                <p className="text-4xl font-bold tracking-tight text-red-700 mb-2">{Math.round((stats.expired / stats.total) * 100) || 0}%</p>
+                <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Expired Rate</p>
               </div>
             </div>
           </div>
 
           {/* College Breakdown */}
-          <div className="bg-white/50 rounded-3xl p-8 backdrop-blur-sm border border-slate-100 shadow-lg shadow-maroon/5">
-            <h3 className="text-xl font-black text-slate-900 mb-6">Agreements by College</h3>
+          <div className="bg-white/70 rounded-3xl p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all">
+            <h3 className="text-xl font-bold tracking-tight text-slate-900 mb-6">Agreements by College</h3>
             <div className="space-y-3">
               {COLLEGES.filter(c => c !== 'All').map((college, index) => {
                 const collegeCount = moas.filter(m => m.college === college && !m.isDeleted).length;
@@ -200,11 +202,11 @@ export const StatisticsDashboard = ({ user }) => {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-bold text-slate-700">{college}</span>
-                      <span className="font-black text-maroon">{collegeCount}</span>
+                      <span className="font-bold text-maroon">{collegeCount}</span>
                     </div>
-                    <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                    <div className="w-full bg-black/5 rounded-full h-2.5 overflow-hidden">
                       <div
-                        className="bg-maroon h-full transition-all duration-700"
+                        className="bg-maroon h-full transition-all duration-700 ease-out rounded-full"
                         style={{ width: `${collegePercentage}%` }}
                       />
                     </div>
@@ -221,11 +223,11 @@ export const StatisticsDashboard = ({ user }) => {
 
 const FilterSelect = memo(({ label, value, onChange, options }) => (
   <div className="text-left">
-    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-2 block">{label}</label>
+    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1 block">{label}</label>
     <select 
       value={value} 
       onChange={e => onChange(e.target.value)}
-      className="w-full p-3 bg-slate-50 rounded-lg outline-none font-bold text-slate-700 text-sm border border-transparent focus:border-maroon/20"
+      className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 text-sm focus:bg-white focus:border-maroon/20 focus:ring-4 focus:ring-maroon/10 transition-all appearance-none cursor-pointer"
     >
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
@@ -234,12 +236,12 @@ const FilterSelect = memo(({ label, value, onChange, options }) => (
 
 const FilterInput = memo(({ label, type, value, onChange }) => (
   <div className="text-left">
-    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-2 block">{label}</label>
+    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1 block">{label}</label>
     <input
       type={type}
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="w-full p-3 bg-slate-50 rounded-lg outline-none font-bold text-slate-700 text-sm border border-transparent focus:border-maroon/20"
+      className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 text-sm focus:bg-white focus:border-maroon/20 focus:ring-4 focus:ring-maroon/10 transition-all placeholder:text-slate-400"
     />
   </div>
 ));
