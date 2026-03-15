@@ -158,7 +158,7 @@ const AdminDashboard = ({ user, role }) => {
         <div className="flex items-center gap-3 mb-10">
           <div className="w-9 h-9 bg-maroon rounded-xl text-white flex items-center justify-center shadow-sm flex-shrink-0"><span className="material-symbols-outlined !text-xl">school</span></div>
           <div className="min-w-0">
-            <h1 className="font-bold tracking-tight text-lg sm:text-xl text-slate-900 leading-tight truncate">Portal</h1>
+            <h1 className="font-bold tracking-tight text-lg sm:text-xl bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent leading-tight truncate">Portal</h1>
             <p className="text-[10px] font-bold text-maroon uppercase tracking-wider truncate">{role}</p>
           </div>
         </div>
@@ -169,7 +169,7 @@ const AdminDashboard = ({ user, role }) => {
         
         <div className="mt-auto pt-6 w-full border-t border-black/5">
           <div className="flex items-center gap-3 px-2 mb-4">
-            <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover" />
+            <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email || 'User'}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover" referrerPolicy="no-referrer" />
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm text-slate-900 truncate">{user?.displayName || user?.email?.split('@')[0]}</span>
               <span className="text-[10px] font-medium text-slate-500 truncate">{user?.email}</span>
@@ -189,13 +189,13 @@ const AdminDashboard = ({ user, role }) => {
             >
               <span className="material-symbols-outlined">{isMobileMenuOpen ? 'close' : 'menu'}</span>
             </button>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight">{activeTab === 'list' ? 'Directory' : activeTab === 'audit' ? 'Audit Trail' : 'Archive Vault'}</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">{activeTab === 'list' ? 'Directory' : activeTab === 'audit' ? 'Audit Trail' : 'Archive Vault'}</h2>
           </div>
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
             {activeTab === 'list' && (isAdmin || isStaff) && (
               <>
                 <button onClick={() => exportMOAsToPDF(moas)} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-black/5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">description</span> <span className="hidden sm:inline">Export PDF</span></button>
-                <button onClick={() => setIsModalOpen(true)} className="bg-maroon text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:bg-maroon/90 flex items-center gap-2 transition-all active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">add</span> New Entry</button>
+                <button onClick={() => setIsModalOpen(true)} className="bg-gradient-to-r from-maroon to-red-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 flex items-center gap-2 transition-all active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">add</span> New Entry</button>
               </>
             )}
             {activeTab === 'audit' && isAdmin && (
@@ -326,7 +326,7 @@ const AdminDashboard = ({ user, role }) => {
               <button
                 onClick={() => { setActiveTab('list'); setIsMobileMenuOpen(false); }}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${
-                  activeTab === 'list' ? 'bg-maroon text-white' : 'text-slate-600 hover:bg-black/5'
+                  activeTab === 'list' ? 'bg-gradient-to-r from-maroon to-red-700 text-white' : 'text-slate-600 hover:bg-black/5'
                 }`}
               >
                 <span className="material-symbols-outlined">dashboard</span> Directory
@@ -335,7 +335,7 @@ const AdminDashboard = ({ user, role }) => {
                 <button
                   onClick={() => { setActiveTab('audit'); setIsMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${
-                    (activeTab === 'audit' || activeTab === 'archive') ? 'bg-maroon text-white' : 'text-slate-600 hover:bg-black/5'
+                    (activeTab === 'audit' || activeTab === 'archive') ? 'bg-gradient-to-r from-maroon to-red-700 text-white' : 'text-slate-600 hover:bg-black/5'
                   }`}
                 >
                   <span className="material-symbols-outlined">history</span> Audit Trail
@@ -345,7 +345,7 @@ const AdminDashboard = ({ user, role }) => {
             
             <div className="mt-auto pt-6 w-full border-t border-black/5">
               <div className="flex items-center gap-3 px-2 mb-4">
-                <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover" />
+                <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email || 'User'}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover" referrerPolicy="no-referrer" />
                 <div className="flex flex-col min-w-0">
                   <span className="font-bold text-sm text-slate-900 truncate">{user?.displayName || user?.email?.split('@')[0]}</span>
                   <span className="text-[10px] font-medium text-slate-500 truncate">{user?.email}</span>
@@ -405,7 +405,7 @@ const AdminDashboard = ({ user, role }) => {
             </div>
             <div className="px-6 py-5 sm:px-8 border-t border-black/5 shrink-0 bg-white/50 flex justify-end gap-3">
               <button type="button" onClick={closeModal} className="font-bold text-slate-700 bg-white border border-black/5 hover:bg-slate-50 transition-all px-5 py-2.5 rounded-xl text-sm shadow-sm active:scale-95">Discard</button>
-              <button type="submit" className="bg-maroon text-white px-6 py-2.5 rounded-xl font-bold shadow-sm hover:bg-maroon/90 active:scale-95 transition-all text-sm">Save Record</button>
+              <button type="submit" className="bg-gradient-to-r from-maroon to-red-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-sm hover:shadow-md active:scale-95 transition-all text-sm">Save Record</button>
             </div>
           </form>
         </div>
@@ -416,7 +416,7 @@ const AdminDashboard = ({ user, role }) => {
 
 // --- Sub-components for absolute cleanliness ---
 const SidebarBtn = memo(({ active, icon, label, onClick }) => (
-  <button onClick={onClick} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all duration-300 group ${active ? 'bg-maroon text-white shadow-md hover:shadow-lg hover:-translate-y-0.5' : 'text-slate-600 hover:bg-black/5 hover:translate-x-1 hover:text-slate-900'}`}>
+  <button onClick={onClick} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all duration-300 group ${active ? 'bg-gradient-to-r from-maroon to-red-700 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5' : 'text-slate-600 hover:bg-black/5 hover:translate-x-1 hover:text-slate-900'}`}>
     <span className="material-symbols-outlined !text-lg group-hover:scale-110 transition-transform duration-300">{icon}</span> {label}
   </button>
 ));

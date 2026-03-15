@@ -117,7 +117,7 @@ export const FacultyDashboard = ({ user }) => {
 
       {/* Header */}
       <div className="w-full bg-white/70 backdrop-blur-xl border-b border-black/5 px-6 sm:px-8 py-4 sm:py-5 lg:hidden flex items-center justify-between shrink-0 z-30 sticky top-0 shadow-sm transition-all">
-        <h1 className="font-bold tracking-tight text-lg text-slate-900">Faculty Portal</h1>
+        <h1 className="font-bold tracking-tight text-lg bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Faculty Portal</h1>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-white border border-black/5 rounded-xl shadow-sm active:scale-95 transition-all flex items-center justify-center"><span className="material-symbols-outlined text-slate-700">menu</span></button>
       </div>
 
@@ -126,7 +126,7 @@ export const FacultyDashboard = ({ user }) => {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl z-50 lg:hidden flex items-start justify-end pt-16 pr-4">
           <div className="bg-white/90 backdrop-blur-3xl border border-black/5 rounded-3xl p-6 w-full max-w-xs shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in slide-in-from-right duration-300">
             <nav className="space-y-3">
-              <button onClick={() => { setIsMobileMenuOpen(false); setIsModalOpen(true); }} className="w-full px-4 py-3 rounded-xl bg-maroon text-white font-bold text-left flex items-center gap-3 shadow-sm transition-all active:scale-95">
+              <button onClick={() => { setIsMobileMenuOpen(false); setIsModalOpen(true); }} className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-maroon to-red-700 text-white font-bold text-left flex items-center gap-3 shadow-sm transition-all active:scale-95">
                 <span className="material-symbols-outlined">add</span> New Agreement
               </button>
               <div className="px-4 py-3 rounded-xl bg-black/[0.03] text-slate-700 font-bold text-left flex items-center gap-3">
@@ -142,19 +142,28 @@ export const FacultyDashboard = ({ user }) => {
         <div className="flex items-center gap-3 mb-10">
           <div className="w-9 h-9 bg-maroon rounded-xl text-white flex items-center justify-center shadow-sm"><span className="material-symbols-outlined !text-xl">school</span></div>
           <div>
-            <h1 className="font-bold tracking-tight text-xl text-slate-900">Portal</h1>
+            <h1 className="font-bold tracking-tight text-xl bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Portal</h1>
             <p className="text-[10px] font-bold text-maroon uppercase tracking-wider">FACULTY</p>
           </div>
         </div>
         <nav className="space-y-3 flex-grow">
-          <button onClick={() => setIsModalOpen(true)} className="w-full px-4 py-3 rounded-xl bg-maroon text-white font-bold flex items-center gap-3 hover:bg-maroon/90 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm">
+          <button onClick={() => setIsModalOpen(true)} className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-maroon to-red-700 text-white font-bold flex items-center gap-3 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all shadow-md">
             <span className="material-symbols-outlined">add</span> New Agreement
           </button>
           <div className="px-4 py-3 rounded-xl bg-black/[0.03] hover:bg-black/[0.05] hover:translate-x-1 cursor-pointer text-slate-700 font-bold flex items-center gap-3 transition-all duration-300">
             <span className="material-symbols-outlined transition-transform duration-300 hover:scale-110">list</span> Agreements
           </div>
         </nav>
-        <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 hover:shadow-sm hover:-translate-y-0.5 rounded-xl font-bold text-slate-700 active:scale-95 flex items-center justify-center gap-2 transition-all duration-300 w-full"><span className="material-symbols-outlined !text-lg">logout</span> Sign Out</button>
+        <div className="mt-auto pt-6 w-full border-t border-black/5">
+          <div className="flex items-center gap-3 px-2 mb-4">
+            <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email || 'User'}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover" referrerPolicy="no-referrer" />
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-sm text-slate-900 truncate">{user?.displayName || user?.email?.split('@')[0]}</span>
+              <span className="text-[10px] font-medium text-slate-500 truncate">{user?.email}</span>
+            </div>
+          </div>
+          <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 rounded-xl font-bold text-slate-700 active:scale-95 flex items-center justify-center gap-2 transition-all w-full"><span className="material-symbols-outlined !text-lg">logout</span> Sign Out</button>
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -282,7 +291,7 @@ export const FacultyDashboard = ({ user }) => {
             </div>
             <div className="px-6 py-5 sm:px-8 border-t border-black/5 shrink-0 bg-white/50 flex justify-end gap-3">
               <button type="button" onClick={closeModal} className="font-bold text-slate-700 bg-white border border-black/5 hover:bg-slate-50 transition-all px-5 py-2.5 rounded-xl text-sm shadow-sm active:scale-95">Cancel</button>
-              <button type="submit" className="bg-maroon text-white px-6 py-2.5 rounded-xl font-bold shadow-sm hover:bg-maroon/90 active:scale-95 transition-all text-sm">Save</button>
+              <button type="submit" className="bg-gradient-to-r from-maroon to-red-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-sm hover:shadow-md active:scale-95 transition-all text-sm">Save</button>
             </div>
           </form>
         </div>
