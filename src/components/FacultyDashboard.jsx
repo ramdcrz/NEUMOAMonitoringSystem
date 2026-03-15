@@ -16,7 +16,18 @@ const MOA_STATUSES = [
 ];
 
 const INDUSTRIES = ['Technology', 'Healthcare', 'Education', 'Finance', 'Manufacturing', 'Energy', 'Retail', 'Hospitality', 'Government', 'Non-profit', 'Other'];
-const COLLEGES = ['CICS', 'CBA', 'COE', 'CAS', 'CED'];
+const COLLEGES = [
+  { name: "ALL", acronym: "ALL" },
+  { name: "College of Accountancy", acronym: "COA" },
+  { name: "College of Arts and Science", acronym: "CAS" },
+  { name: "College of Business Administration", acronym: "CBA" },
+  { name: "College of Communication", acronym: "COC" },
+  { name: "College of Engineering and Architecture", acronym: "CEA" },
+  { name: "College of Education", acronym: "COE" },
+  { name: "College of Informatics and Computing Studies", acronym: "CICS" },
+  { name: "College of Medical Technology", acronym: "CMT" },
+  { name: "College of Nursing", acronym: "CON" }
+];
 
 export const FacultyDashboard = ({ user }) => {
   const [moas, setMoas] = useState([]);
@@ -24,6 +35,7 @@ export const FacultyDashboard = ({ user }) => {
   const [selectedCollege, setSelectedCollege] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [selectedMoa, setSelectedMoa] = useState(null);
   const [formData, setFormData] = useState({
     hteId: '',
     companyName: '',
@@ -33,7 +45,7 @@ export const FacultyDashboard = ({ user }) => {
     industry: 'Technology',
     effectiveDate: '',
     expiryDate: '',
-    college: 'CICS',
+    college: 'College of Informatics and Computing Studies',
     endorsedBy: '',
     status: 'PENDING: Legal Review',
     notes: ''
@@ -57,7 +69,7 @@ export const FacultyDashboard = ({ user }) => {
       String(moa.contactPerson || '').toLowerCase().includes(lowerSearch) ||
       String(moa.address || '').toLowerCase().includes(lowerSearch);
     
-    const matchesCollege = selectedCollege === 'ALL' || moa.college === selectedCollege;
+    const matchesCollege = selectedCollege === 'ALL' || String(moa.college || '').includes(selectedCollege);
     return matchesSearch && matchesCollege;
   });
 
@@ -73,7 +85,7 @@ export const FacultyDashboard = ({ user }) => {
       industry: 'Technology',
       effectiveDate: '',
       expiryDate: '',
-      college: 'CICS',
+      college: 'College of Informatics and Computing Studies',
       endorsedBy: '',
       status: 'PENDING: Legal Review',
       notes: ''
@@ -104,6 +116,47 @@ export const FacultyDashboard = ({ user }) => {
     } catch (error) {
       toast.error('Error deleting agreement', { duration: 2000 });
     }
+  };
+
+  const formatDate = (dateValue) => {
+    if (!dateValue) return '-';
+    let d;
+    if (typeof dateValue.toDate === 'function') d = dateValue.toDate();
+    else if (dateValue.seconds) d = new Date(dateValue.seconds * 1000);
+    else d = new Date(dateValue);
+    return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
+  const getDaysRemaining = (expiryDate) => {
+    if (!expiryDate) return 'N/A';
+    let end;
+    if (typeof expiryDate.toDate === 'function') end = expiryDate.toDate();
+    else if (expiryDate.seconds) end = new Date(expiryDate.seconds * 1000);
+    else end = new Date(expiryDate);
+    if (isNaN(end.getTime())) return 'N/A';
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    end.setHours(0,0,0,0);
+    const diffTime = end - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 0) return `${diffDays} days until renewal required`;
+    if (diffDays === 0) return `Expires today`;
+    return `Expired ${Math.abs(diffDays)} days ago`;
+  };
+
+  const toInputDate = (dateValue) => {
+    if (!dateValue) return '';
+    let d;
+    if (typeof dateValue.toDate === 'function') d = dateValue.toDate();
+    else if (dateValue.seconds) d = new Date(dateValue.seconds * 1000);
+    else d = new Date(dateValue);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   return (
@@ -156,7 +209,7 @@ export const FacultyDashboard = ({ user }) => {
         </nav>
         <div className="mt-auto pt-6 w-full border-t border-black/5">
           <div className="flex items-center gap-3 px-2 mb-4">
-            <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email || 'User'}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover" referrerPolicy="no-referrer" />
+            <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email || 'User'}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover bg-white p-[2px] border border-slate-200" referrerPolicy="no-referrer" />
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm text-slate-900 truncate">{user?.displayName || user?.email?.split('@')[0]}</span>
               <span className="text-[10px] font-medium text-slate-500 truncate">{user?.email}</span>
@@ -173,18 +226,25 @@ export const FacultyDashboard = ({ user }) => {
           <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1 flex items-center gap-3 bg-black/[0.03] border border-transparent focus-within:bg-white focus-within:border-maroon/20 focus-within:ring-4 focus-within:ring-maroon/10 rounded-xl px-4 py-3 transition-all group">
-                <span className="material-symbols-outlined text-slate-400 !text-xl group-focus-within:text-maroon transition-colors">search</span>
-                <input type="text" placeholder="Search by name, ID, contact..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full outline-none bg-transparent font-bold text-slate-800 placeholder:text-slate-400 text-sm sm:text-base pr-8" />
+                <div className="flex items-center justify-center pointer-events-none">
+                  <span className="material-symbols-outlined text-slate-400 !text-xl group-focus-within:text-maroon transition-colors">search</span>
+                </div>
+                <input type="text" placeholder="Search by name, ID, contact..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full outline-none bg-transparent font-bold text-slate-800 placeholder:text-slate-400 text-sm sm:text-base pr-4" />
                 {searchTerm && (
-                  <button onClick={() => setSearchTerm('')} className="absolute right-4 text-slate-400 hover:text-maroon transition-colors flex items-center justify-center hover:scale-110 active:scale-95">
+                  <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-maroon transition-colors flex items-center justify-center hover:scale-110 active:scale-95">
                     <span className="material-symbols-outlined !text-lg">close</span>
                   </button>
                 )}
               </div>
-              <select value={selectedCollege} onChange={e => setSelectedCollege(e.target.value)} className="w-full sm:w-48 p-3.5 bg-black/[0.03] border border-transparent focus:bg-white focus:border-maroon/20 focus:ring-4 focus:ring-maroon/10 rounded-xl outline-none font-bold text-slate-700 transition-all appearance-none text-sm cursor-pointer">
-                <option value="ALL">All Colleges</option>
-                {COLLEGES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <div className="relative w-full sm:w-32 group flex-shrink-0">
+                <select value={selectedCollege} onChange={e => setSelectedCollege(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                  {COLLEGES.map(c => <option key={c.acronym} value={c.name}>{c.name}</option>)}
+                </select>
+                <div className="w-full p-3 bg-gradient-to-r from-maroon to-red-700 rounded-2xl shadow-sm font-bold text-white flex items-center justify-between group-hover:-translate-y-0.5 group-hover:shadow-md transition-all group-focus-within:ring-4 group-focus-within:ring-red-500/30">
+                  <span className="truncate pr-2">{COLLEGES.find(c => c.name === selectedCollege)?.acronym || 'ALL'}</span>
+                  <span className="material-symbols-outlined !text-lg text-white/80">arrow_drop_down</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -194,17 +254,32 @@ export const FacultyDashboard = ({ user }) => {
               {/* Mobile Cards */}
               <div className="sm:hidden divide-y divide-black/5">
                 {filteredMoas.map((moa, index) => (
-                  <div key={moa.id} className="p-5 hover:bg-black/[0.02] transition-colors animate-in fade-in" style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}>
-                    <div className="font-bold tracking-tight text-slate-800 mb-2">{moa.companyName}</div>
-                    <div className="text-xs font-bold text-slate-600 space-y-1.5 mb-3">
-                      <div>{moa.hteId}</div>
-                      <div>{moa.contactPerson}</div>
-                    </div>
+                  <div key={moa.id} onClick={() => setSelectedMoa(moa)} className="p-5 hover:bg-black/[0.02] transition-colors animate-in fade-in cursor-pointer" style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}>
+                    <div className="font-bold tracking-tight text-slate-800 mb-1">{moa.companyName}</div>
+                    <div className="text-[10px] font-bold text-slate-500 font-mono tracking-wider mb-3">{moa.hteId}</div>
+                    <div className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">{moa.college}</div>
                     <div className="mb-3">
                       <StatusBadge status={moa.status} />
                     </div>
-                    <div className="flex gap-2 mt-1">
-                      <button onClick={() => { setEditId(moa.id); setFormData(moa); setIsModalOpen(true); }} className="px-3 py-1.5 rounded-md font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 text-xs transition-colors"><span className="material-symbols-outlined !text-sm">edit</span></button>
+                    <div className="flex gap-2 mt-1" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => { 
+                        setEditId(moa.id); 
+                        setFormData({
+                          hteId: moa.hteId || '',
+                          companyName: moa.companyName || '',
+                          address: moa.address || '',
+                          contactPerson: moa.contactPerson || '',
+                          contactEmail: moa.contactEmail || '',
+                          industry: moa.industry || 'Technology',
+                          effectiveDate: toInputDate(moa.effectiveDate),
+                          expiryDate: toInputDate(moa.expiryDate),
+                          college: moa.college || 'College of Informatics and Computing Studies',
+                          endorsedBy: moa.endorsedBy || '',
+                          status: moa.status || 'PENDING: Legal Review',
+                          notes: moa.notes || ''
+                        }); 
+                        setIsModalOpen(true); 
+                      }} className="px-3 py-1.5 rounded-md font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 text-xs transition-colors"><span className="material-symbols-outlined !text-sm">edit</span></button>
                       <button onClick={() => handleDelete(moa.id, moa.companyName)} className="px-3 py-1.5 rounded-md font-bold text-red-700 bg-red-50 hover:bg-red-100 text-xs transition-colors"><span className="material-symbols-outlined !text-sm">delete</span></button>
                     </div>
                   </div>
@@ -216,26 +291,41 @@ export const FacultyDashboard = ({ user }) => {
                 <table className="w-full text-left border-collapse text-xs sm:text-sm relative">
                   <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md font-bold text-[11px] text-slate-500 uppercase tracking-wider border-b border-black/5 shadow-sm">
                     <tr>
-                      <th className="p-3 sm:p-4">Partner</th>
-                      <th className="p-3 sm:p-4">Contact</th>
+                      <th className="p-3 sm:p-4 lg:p-6">Partner & ID</th>
                       <th className="p-3 sm:p-4 hidden lg:table-cell">Industry</th>
-                      <th className="p-3 sm:p-4">College</th>
+                      <th className="p-3 sm:p-4 lg:p-6">College</th>
                       <th className="p-3 sm:p-4 hidden lg:table-cell">Status</th>
-                      <th className="p-3 sm:p-4 text-right">Actions</th>
+                      <th className="p-3 sm:p-4 lg:p-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/5">
                     {filteredMoas.map((moa, index) => (
-                      <tr key={moa.id} className="hover:bg-black/[0.02] transition-colors duration-200 font-bold animate-in fade-in" style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}>
-                        <td className="p-3 sm:p-4"><div className="font-bold tracking-tight text-slate-800 text-xs sm:text-sm mb-0.5">{moa.companyName}</div><div className="text-[9px] text-slate-500 font-mono tracking-wider">{moa.hteId}</div></td>
-                        <td className="p-3 sm:p-4 text-slate-700 text-xs"><div>{moa.contactPerson || '-'}</div></td>
+                      <tr key={moa.id} onClick={() => setSelectedMoa(moa)} className="hover:bg-white/50 hover:shadow-sm transition-all duration-300 font-bold group animate-in fade-in slide-in-from-bottom-2 cursor-pointer" style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}>
+                        <td className="p-3 sm:p-4 lg:p-6"><div className="font-bold tracking-tight text-slate-800 text-xs sm:text-sm lg:text-base group-hover:text-maroon transition-colors duration-300 line-clamp-1">{moa.companyName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-mono tracking-wider line-clamp-1 mt-0.5">{moa.hteId}</div></td>
                         <td className="p-3 sm:p-4 text-slate-600 hidden lg:table-cell">{moa.industry || '-'}</td>
-                        <td className="p-3 sm:p-4 text-slate-600 text-xs uppercase">{moa.college}</td>
+                        <td className="p-3 sm:p-4 lg:p-6 text-slate-600 uppercase text-xs sm:text-xs whitespace-nowrap tracking-wide">{COLLEGES.find(c => c.name === moa.college)?.acronym || moa.college}</td>
                         <td className="p-3 sm:p-4 hidden lg:table-cell">
                           <StatusBadge status={moa.status} />
                         </td>
-                        <td className="p-3 sm:p-4 text-right space-x-1 flex justify-end">
-                          <button onClick={() => { setEditId(moa.id); setFormData(moa); setIsModalOpen(true); }} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors active:scale-95"><span className="material-symbols-outlined !text-base">edit</span></button>
+                        <td className="p-3 sm:p-4 lg:p-6 text-right space-x-1 sm:space-x-2 flex justify-end" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => { 
+                            setEditId(moa.id); 
+                            setFormData({
+                              hteId: moa.hteId || '',
+                              companyName: moa.companyName || '',
+                              address: moa.address || '',
+                              contactPerson: moa.contactPerson || '',
+                              contactEmail: moa.contactEmail || '',
+                              industry: moa.industry || 'Technology',
+                              effectiveDate: toInputDate(moa.effectiveDate),
+                              expiryDate: toInputDate(moa.expiryDate),
+                              college: moa.college || 'College of Informatics and Computing Studies',
+                              endorsedBy: moa.endorsedBy || '',
+                              status: moa.status || 'PENDING: Legal Review',
+                              notes: moa.notes || ''
+                            }); 
+                            setIsModalOpen(true); 
+                          }} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors active:scale-95"><span className="material-symbols-outlined !text-base">edit</span></button>
                           <button onClick={() => handleDelete(moa.id, moa.companyName)} className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors active:scale-95"><span className="material-symbols-outlined !text-base">delete</span></button>
                         </td>
                       </tr>
@@ -254,6 +344,109 @@ export const FacultyDashboard = ({ user }) => {
           )}
         </div>
       </main>
+
+      {/* Detail View Modal */}
+      {selectedMoa && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-4 z-[70] animate-in fade-in duration-300" onClick={() => setSelectedMoa(null)}>
+          <div className="bg-white/90 backdrop-blur-3xl border border-black/5 w-full max-w-2xl rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-6 sm:px-8 sm:py-6 border-b border-black/5 shrink-0 bg-white/50 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">{selectedMoa.companyName}</h3>
+                <p className="text-xs font-bold text-slate-500 font-mono mt-1">{selectedMoa.hteId}</p>
+              </div>
+              <button onClick={() => setSelectedMoa(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors">
+                <span className="material-symbols-outlined block !text-xl">close</span>
+              </button>
+            </div>
+            
+            <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-8">
+              {/* Section: Partnership Details */}
+              <section>
+                <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Partnership Details</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="sm:col-span-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Assigned College</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.college || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Endorsed By</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.endorsedBy || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Industry</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.industry || 'N/A'}</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section A: Contact Information */}
+              <section>
+                <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Contact Information</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Primary Contact Person</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.contactPerson || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email</p>
+                    {selectedMoa.contactEmail ? (
+                      <a href={`mailto:${selectedMoa.contactEmail}`} className="text-sm font-bold text-slate-900 hover:text-maroon hover:underline transition-colors">{selectedMoa.contactEmail}</a>
+                    ) : <p className="text-sm font-bold text-slate-800">N/A</p>}
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Address</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.address || 'N/A'}</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section B: Timeline & Compliance */}
+              <section>
+                <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Timeline & Compliance</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Effective Date</p>
+                    <p className="text-sm font-bold text-slate-800">{formatDate(selectedMoa.effectiveDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Expiry Date</p>
+                    <p className="text-sm font-bold text-slate-800">{formatDate(selectedMoa.expiryDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                    <StatusBadge status={selectedMoa.status} />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Days Remaining</p>
+                    <p className="text-sm font-bold text-slate-800">{getDaysRemaining(selectedMoa.expiryDate)}</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section C: Audit Context */}
+              <section>
+                <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Audit Context</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Created By</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.createdBy || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Last Modified</p>
+                    <p className="text-sm font-bold text-slate-800">{formatDate(selectedMoa.lastModified) || formatDate(selectedMoa.createdAt) || 'N/A'}</p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Notarization Notes</p>
+                    <div className="bg-black/[0.03] rounded-xl p-4 border border-black/5">
+                      <p className="text-sm font-bold text-slate-700 whitespace-pre-wrap">{selectedMoa.notes || 'No additional notes provided.'}</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {isModalOpen && (
@@ -277,11 +470,11 @@ export const FacultyDashboard = ({ user }) => {
                 <InputField label="Effective Date" type="date" value={formData.effectiveDate} onChange={v => setFormData({...formData, effectiveDate: v})} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <InputField label="Expiry Date" type="date" value={formData.expiryDate} onChange={v => setFormData({...formData, expiryDate: v})} />
+                <InputField label="Expiry Date" type="date" min={formData.effectiveDate} value={formData.expiryDate} onChange={v => setFormData({...formData, expiryDate: v})} />
                 <InputField label="Endorsed By" value={formData.endorsedBy} onChange={v => setFormData({...formData, endorsedBy: v})} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <SelectField label="College" value={formData.college} options={COLLEGES} onChange={v => setFormData({...formData, college: v})} />
+                <SelectField label="Assigned College" value={formData.college} options={COLLEGES.filter(c => c.name !== "ALL").map(c => c.name)} onChange={v => setFormData({...formData, college: v})} />
                 <SelectField label="Status" value={formData.status} options={MOA_STATUSES} onChange={v => setFormData({...formData, status: v})} />
               </div>
               <div>
@@ -318,17 +511,18 @@ const StatusBadge = memo(({ status }) => {
   );
 });
 
-const InputField = memo(({ label, value, onChange, placeholder, type = 'text' }) => (
+const InputField = memo(({ label, value, onChange, placeholder, type = 'text', min }) => (
   <div className="text-left">
     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1 block">{label}</label>
-    <input required type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 focus:bg-white focus:ring-4 focus:ring-maroon/10 focus:border-maroon/20 transition-all text-sm placeholder:text-slate-400" />
+    <input required type={type} min={min} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 focus:bg-white focus:ring-4 focus:ring-maroon/10 focus:border-maroon/20 transition-all text-sm placeholder:text-slate-400" />
   </div>
 ));
 
 const SelectField = memo(({ label, value, options, onChange }) => (
   <div className="text-left">
     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1 block">{label}</label>
-    <select value={value} onChange={e => onChange(e.target.value)} className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 focus:bg-white focus:ring-4 focus:ring-maroon/10 focus:border-maroon/20 transition-all text-sm appearance-none">
+    <select required value={value || ''} onChange={e => onChange(e.target.value)} className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 focus:bg-white focus:ring-4 focus:ring-maroon/10 focus:border-maroon/20 transition-all text-sm appearance-none cursor-pointer">
+      <option value="" disabled>Select an option</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
   </div>

@@ -1,12 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { subscribeToMOAs } from '../services/moaService';
+
+const COLLEGES = [
+  { name: "ALL", acronym: "ALL" },
+  { name: "College of Accountancy", acronym: "COA" },
+  { name: "College of Arts and Science", acronym: "CAS" },
+  { name: "College of Business Administration", acronym: "CBA" },
+  { name: "College of Communication", acronym: "COC" },
+  { name: "College of Engineering and Architecture", acronym: "CEA" },
+  { name: "College of Education", acronym: "COE" },
+  { name: "College of Informatics and Computing Studies", acronym: "CICS" },
+  { name: "College of Medical Technology", acronym: "CMT" },
+  { name: "College of Nursing", acronym: "CON" }
+];
 
 export const StudentDashboard = ({ user }) => {
   const [moas, setMoas] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedMoa, setSelectedMoa] = useState(null);
+  const [filterCollege, setFilterCollege] = useState('ALL');
 
   useEffect(() => {
     const unsubscribe = subscribeToMOAs(docs => {
@@ -23,16 +38,36 @@ export const StudentDashboard = ({ user }) => {
     const lowerSearch = searchTerm.toLowerCase();
     return String(moa.companyName || '').toLowerCase().includes(lowerSearch) ||
            String(moa.contactPerson || '').toLowerCase().includes(lowerSearch) ||
-           String(moa.address || '').toLowerCase().includes(lowerSearch);
+           String(moa.address || '').toLowerCase().includes(lowerSearch) &&
+           (filterCollege === 'ALL' || String(moa.college || '').includes(filterCollege));
   });
 
-  const formatDate = (dateValue, options) => {
-    if (!dateValue) return 'N/A';
+  const formatDate = (dateValue) => {
+    if (!dateValue) return '-';
     let d;
     if (typeof dateValue.toDate === 'function') d = dateValue.toDate();
     else if (dateValue.seconds) d = new Date(dateValue.seconds * 1000);
     else d = new Date(dateValue);
-    return isNaN(d.getTime()) ? 'N/A' : (options ? d.toLocaleDateString('en-PH', options) : d.toLocaleDateString());
+    return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
+  const getDaysRemaining = (expiryDate) => {
+    if (!expiryDate) return 'N/A';
+    let end;
+    if (typeof expiryDate.toDate === 'function') end = expiryDate.toDate();
+    else if (expiryDate.seconds) end = new Date(expiryDate.seconds * 1000);
+    else end = new Date(expiryDate);
+    if (isNaN(end.getTime())) return 'N/A';
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    end.setHours(0,0,0,0);
+    const diffTime = end - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 0) return `${diffDays} days until renewal required`;
+    if (diffDays === 0) return `Expires today`;
+    return `Expired ${Math.abs(diffDays)} days ago`;
   };
 
   return (
@@ -77,20 +112,27 @@ export const StudentDashboard = ({ user }) => {
         <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-5">
           {/* Search Bar */}
           <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all duration-500">
-            <div className="relative group flex items-center gap-3 bg-black/[0.03] border border-transparent focus-within:bg-white focus-within:border-maroon/20 focus-within:ring-4 focus-within:ring-maroon/10 focus-within:-translate-y-1 focus-within:shadow-md rounded-xl px-4 py-3 transition-all duration-300">
-              <span className="material-symbols-outlined text-slate-400 !text-xl group-focus-within:text-maroon transition-colors">search</span>
-              <input
-                type="text"
-                placeholder="Search by company name, contact person..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full outline-none bg-transparent font-medium text-slate-800 placeholder:text-slate-400 text-sm sm:text-base pr-8"
-              />
-              {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="absolute right-4 text-slate-400 hover:text-maroon transition-colors flex items-center justify-center hover:scale-110 active:scale-95">
-                  <span className="material-symbols-outlined !text-lg">close</span>
-                </button>
-              )}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 group flex items-center gap-3 bg-black/[0.03] border border-transparent focus-within:bg-white focus-within:border-maroon/20 focus-within:ring-4 focus-within:ring-maroon/10 focus-within:-translate-y-1 focus-within:shadow-md rounded-xl px-4 py-3 transition-all duration-300">
+                <div className="flex items-center justify-center pointer-events-none">
+                  <span className="material-symbols-outlined text-slate-400 !text-xl group-focus-within:text-maroon transition-colors">search</span>
+                </div>
+                <input type="text" placeholder="Search by company name, contact person..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full outline-none bg-transparent font-bold text-slate-800 placeholder:text-slate-400 text-sm sm:text-base pr-4" />
+                {searchTerm && (
+                  <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-maroon transition-colors flex items-center justify-center hover:scale-110 active:scale-95">
+                    <span className="material-symbols-outlined !text-lg">close</span>
+                  </button>
+                )}
+              </div>
+              <div className="relative w-full sm:w-32 group flex-shrink-0">
+                <select value={filterCollege} onChange={e => setFilterCollege(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                  {COLLEGES.map(c => <option key={c.acronym} value={c.name}>{c.name}</option>)}
+                </select>
+                <div className="w-full h-full p-3 bg-gradient-to-r from-maroon to-red-700 rounded-xl sm:rounded-2xl shadow-sm font-bold text-white flex items-center justify-between group-hover:-translate-y-0.5 group-hover:shadow-md transition-all group-focus-within:ring-4 group-focus-within:ring-red-500/30">
+                  <span className="truncate pr-2">{COLLEGES.find(c => c.name === filterCollege)?.acronym || 'ALL'}</span>
+                  <span className="material-symbols-outlined !text-lg text-white/80">arrow_drop_down</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -98,24 +140,18 @@ export const StudentDashboard = ({ user }) => {
           {!loading && filteredMoas.length > 0 ? (
             <div className="bg-white/70 rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all flex flex-col">
               {/* Mobile View: Cards */}
-              <div className="sm:hidden divide-y divide-black/5 max-h-[65vh] overflow-y-auto custom-scrollbar">
+              <div className="sm:hidden divide-y divide-black/5 overflow-y-auto max-h-[65vh] custom-scrollbar">
                 {filteredMoas.map((moa, index) => (
                   <div
                     key={moa.id}
-                    className="p-5 hover:bg-white/80 hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 rounded-xl cursor-pointer"
+                    onClick={() => setSelectedMoa(moa)}
+                    className="p-5 hover:bg-black/[0.02] transition-colors animate-in fade-in cursor-pointer"
                     style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}
                   >
-                    <div className="font-semibold tracking-tight text-slate-800 text-base mb-2 line-clamp-1">{moa.companyName}</div>
-                    <div className="text-xs text-slate-600 font-medium mb-4 space-y-1.5">
-                      <div><span className="text-slate-400 mr-1">Address:</span> {moa.address || 'N/A'}</div>
-                      <div><span className="text-slate-400 mr-1">Contact:</span> {moa.contactPerson || 'N/A'}</div>
-                      <div><span className="text-slate-400 mr-1">Email:</span> {moa.contactEmail || 'N/A'}</div>
-                      <div><span className="text-slate-400 mr-1">Effective:</span> {formatDate(moa.effectiveDate)}</div>
-                    </div>
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-md bg-green-100/50 text-green-700 uppercase tracking-wide w-fit">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                      APPROVED
-                    </span>
+                    <div className="font-bold tracking-tight text-slate-800 mb-1 line-clamp-1">{moa.companyName}</div>
+                    <div className="text-[10px] text-slate-500 font-mono tracking-wider mb-3">{moa.hteId}</div>
+                    <div className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">{moa.college}</div>
+                    <StatusBadge status={moa.status} />
                   </div>
                 ))}
               </div>
@@ -125,25 +161,24 @@ export const StudentDashboard = ({ user }) => {
                 <table className="w-full text-left border-collapse text-xs sm:text-sm relative">
                   <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md font-bold text-[11px] text-slate-500 uppercase tracking-wider border-b border-black/5 shadow-sm">
                     <tr>
-                      <th className="p-4 sm:p-6">Partner Institution</th>
-                      <th className="p-4 sm:p-6">Address</th>
-                      <th className="p-4 sm:p-6 hidden lg:table-cell">Contact Person</th>
-                      <th className="p-4 sm:p-6 hidden xl:table-cell">Email</th>
-                      <th className="p-4 sm:p-6 hidden lg:table-cell text-right">Effective Date</th>
+                      <th className="p-4 sm:p-6">Partner & ID</th>
+                      <th className="p-4 sm:p-6 hidden lg:table-cell">Industry</th>
+                      <th className="p-4 sm:p-6">College</th>
+                      <th className="p-4 sm:p-6">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/5">
                     {filteredMoas.map((moa, index) => (
                       <tr
                         key={moa.id}
-                        className="hover:bg-white/60 hover:shadow-sm transition-all duration-300 font-bold animate-in fade-in cursor-default"
+                        className="hover:bg-white/60 hover:shadow-sm transition-all duration-300 font-bold animate-in fade-in cursor-pointer group"
+                        onClick={() => setSelectedMoa(moa)}
                         style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}
                       >
-                        <td className="p-4 sm:p-6"><div className="font-bold text-slate-900 text-sm">{moa.companyName}</div></td>
-                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm line-clamp-1">{moa.address || 'N/A'}</td>
-                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden lg:table-cell">{moa.contactPerson || 'N/A'}</td>
-                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden xl:table-cell line-clamp-1">{moa.contactEmail || 'N/A'}</td>
-                        <td className="p-4 sm:p-6 text-slate-600 text-xs sm:text-sm hidden lg:table-cell text-right">{formatDate(moa.effectiveDate, { month: 'short', day: '2-digit', year: '2-digit' })}</td>
+                        <td className="p-4 sm:p-6"><div className="font-bold tracking-tight text-slate-900 text-sm group-hover:text-maroon transition-colors duration-300 line-clamp-1">{moa.companyName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-mono tracking-wider line-clamp-1 mt-0.5">{moa.hteId}</div></td>
+                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden lg:table-cell">{moa.industry || '-'}</td>
+                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm uppercase tracking-wide">{COLLEGES.find(c => c.name === moa.college)?.acronym || moa.college}</td>
+                        <td className="p-4 sm:p-6"><StatusBadge status={moa.status} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -169,6 +204,106 @@ export const StudentDashboard = ({ user }) => {
           )}
         </div>
       </main>
+
+      {/* Detail View Modal */}
+      {selectedMoa && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-4 z-[70] animate-in fade-in duration-300" onClick={() => setSelectedMoa(null)}>
+          <div className="bg-white/90 backdrop-blur-3xl border border-black/5 w-full max-w-2xl rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-6 sm:px-8 sm:py-6 border-b border-black/5 shrink-0 bg-white/50 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">{selectedMoa.companyName}</h3>
+                <p className="text-xs font-bold text-slate-500 font-mono mt-1">{selectedMoa.hteId}</p>
+              </div>
+              <button onClick={() => setSelectedMoa(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors">
+                <span className="material-symbols-outlined block !text-xl">close</span>
+              </button>
+            </div>
+            
+            <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-8">
+              {/* Section: Partnership Details */}
+              <section>
+                <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Partnership Details</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="sm:col-span-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Assigned College</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.college || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Endorsed By</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.endorsedBy || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Industry</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.industry || 'N/A'}</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section A: Contact Information */}
+              <section>
+                <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Contact Information</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Primary Contact Person</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.contactPerson || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email</p>
+                    {selectedMoa.contactEmail ? (
+                      <a href={`mailto:${selectedMoa.contactEmail}`} className="text-sm font-bold text-slate-900 hover:text-maroon hover:underline transition-colors">{selectedMoa.contactEmail}</a>
+                    ) : <p className="text-sm font-bold text-slate-800">N/A</p>}
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Address</p>
+                    <p className="text-sm font-bold text-slate-800">{selectedMoa.address || 'N/A'}</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section B: Timeline & Compliance */}
+              <section>
+                <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Timeline & Compliance</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Effective Date</p>
+                    <p className="text-sm font-bold text-slate-800">{formatDate(selectedMoa.effectiveDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Expiry Date</p>
+                    <p className="text-sm font-bold text-slate-800">{formatDate(selectedMoa.expiryDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                    <StatusBadge status={selectedMoa.status} />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Days Remaining</p>
+                    <p className="text-sm font-bold text-slate-800">{getDaysRemaining(selectedMoa.expiryDate)}</p>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+const StatusBadge = memo(({ status }) => {
+  const safeStatus = String(status || '');
+  let bgColor = 'bg-slate-100/50 text-slate-700';
+  let dotColor = 'bg-slate-400';
+  if (safeStatus.includes('APPROVED')) { bgColor = 'bg-green-100/50 text-green-700'; dotColor = 'bg-green-500'; }
+  else if (safeStatus.includes('PENDING')) { bgColor = 'bg-blue-100/50 text-blue-700'; dotColor = 'bg-blue-500'; }
+  else if (safeStatus.includes('EXPIRING')) { bgColor = 'bg-orange-100/50 text-orange-700'; dotColor = 'bg-orange-500'; }
+  else if (safeStatus.includes('EXPIRED')) { bgColor = 'bg-red-100/50 text-red-700'; dotColor = 'bg-red-500'; }
+  
+  const shortStatus = safeStatus.split(':')[0] || safeStatus || 'UNKNOWN';
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide whitespace-nowrap w-fit line-clamp-1 ${bgColor}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dotColor} animate-pulse`}></span>
+      {shortStatus}
+    </span>
+  );
+});

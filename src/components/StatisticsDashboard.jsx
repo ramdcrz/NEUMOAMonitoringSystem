@@ -3,11 +3,22 @@ import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { subscribeToMOAs } from '../services/moaService';
 
-const COLLEGES = ['All', 'CICS', 'CBA', 'COE', 'CAS', 'CED'];
+const COLLEGES = [
+  { name: "ALL", acronym: "ALL" },
+  { name: "College of Accountancy", acronym: "COA" },
+  { name: "College of Arts and Science", acronym: "CAS" },
+  { name: "College of Business Administration", acronym: "CBA" },
+  { name: "College of Communication", acronym: "COC" },
+  { name: "College of Engineering and Architecture", acronym: "CEA" },
+  { name: "College of Education", acronym: "COE" },
+  { name: "College of Informatics and Computing Studies", acronym: "CICS" },
+  { name: "College of Medical Technology", acronym: "CMT" },
+  { name: "College of Nursing", acronym: "CON" }
+];
 
 export const StatisticsDashboard = ({ user }) => {
   const [moas, setMoas] = useState([]);
-  const [selectedCollege, setSelectedCollege] = useState('All');
+  const [selectedCollege, setSelectedCollege] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -29,7 +40,7 @@ export const StatisticsDashboard = ({ user }) => {
 
   const filteredMoas = moas.filter(moa => {
     if (!moa) return false;
-    const collegeMatch = selectedCollege === 'All' || moa.college === selectedCollege;
+    const collegeMatch = selectedCollege === 'ALL' || String(moa.college || '').includes(selectedCollege);
     
     let dateMatch = true;
     if (startDate) {
@@ -120,7 +131,7 @@ export const StatisticsDashboard = ({ user }) => {
                 onChange={setEndDate}
               />
               <button 
-                onClick={() => { setSelectedCollege('All'); setStartDate(''); setEndDate(''); }}
+                onClick={() => { setSelectedCollege('ALL'); setStartDate(''); setEndDate(''); }}
                 className="col-span-full sm:col-span-1 lg:col-span-1 h-[52px] self-end px-4 flex items-center justify-center gap-2 bg-white border border-black/5 hover:bg-slate-50 hover:text-maroon hover:shadow-md hover:-translate-y-0.5 text-slate-700 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 active:translate-y-0 group"
               >
                 <span className="material-symbols-outlined !text-lg group-hover:-rotate-180 transition-transform duration-500">restart_alt</span>
@@ -191,17 +202,17 @@ export const StatisticsDashboard = ({ user }) => {
           <div className="bg-white/70 rounded-3xl p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all">
             <h3 className="text-xl font-bold tracking-tight text-slate-900 mb-6">Agreements by College</h3>
             <div className="space-y-3">
-              {COLLEGES.filter(c => c !== 'All').map((college, index) => {
-                const collegeCount = moas.filter(m => m && m.college === college && !m.isDeleted).length;
+              {COLLEGES.filter(c => c.name !== 'ALL').map((collegeObj, index) => {
+                const collegeCount = moas.filter(m => m && String(m.college || '').includes(collegeObj.name) && !m.isDeleted).length;
                 const collegePercentage = stats.total > 0 ? Math.round((collegeCount / stats.total) * 100) : 0;
                 return (
                   <div 
-                    key={college}
+                    key={collegeObj.name}
                     className="animate-in fade-in duration-500"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-slate-700">{college}</span>
+                      <span className="font-bold text-slate-700">{collegeObj.name}</span>
                       <span className="font-bold text-maroon">{collegeCount}</span>
                     </div>
                     <div className="w-full bg-black/5 rounded-full h-2.5 overflow-hidden">
@@ -235,15 +246,17 @@ const StatCard = memo(({ icon, label, value, color, bgColor, total }) => (
 ));
 
 const FilterSelect = memo(({ label, value, onChange, options }) => (
-  <div className="text-left">
+  <div className="relative group">
     <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1 block">{label}</label>
-    <select 
-      value={value} 
-      onChange={e => onChange(e.target.value)}
-      className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 text-sm focus:bg-white focus:border-maroon/20 focus:ring-4 focus:ring-maroon/10 transition-all appearance-none cursor-pointer"
-    >
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
+    <div className="relative">
+      <select value={value} onChange={e => onChange(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+        {options.map(o => <option key={o.acronym} value={o.name}>{o.name}</option>)}
+      </select>
+      <div className="w-full p-3.5 bg-gradient-to-r from-maroon to-red-700 rounded-xl shadow-sm font-bold text-white flex items-center justify-between group-hover:-translate-y-0.5 group-hover:shadow-md transition-all group-focus-within:ring-4 group-focus-within:ring-red-500/30">
+        <span className="truncate pr-2">{options.find(o => o.name === value)?.acronym || 'ALL'}</span>
+        <span className="material-symbols-outlined !text-lg text-white/80">arrow_drop_down</span>
+      </div>
+    </div>
   </div>
 ));
 
