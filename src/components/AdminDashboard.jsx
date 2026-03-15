@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, memo } from 'react';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
+import { collection, query, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { createMOA, subscribeToMOAs, archiveMOA, subscribeToAudit, updateMOA, restoreMOA, deleteMOAPermanently } from '../services/moaService';
 import { exportMOAsToPDF } from '../services/reportService';
@@ -21,9 +22,9 @@ const MOA_STATUSES = [
   "APPROVED: Signed by President",
   "APPROVED: In Notarization",
   "APPROVED: Active (No Notarization)",
-  "PENDING: Partner Signature",
-  "PENDING: Legal Review",
-  "PENDING: University Approval",
+  "PROCESSING: Awaiting signature of the MOA draft by HTE partner.",
+  "PROCESSING: MOA draft sent to Legal Office for Review.",
+  "PROCESSING: MOA draft and Opinion of Legal Office sent to VPAA/OP for approval.",
   "EXPIRED: Terminated",
   "EXPIRING: Renewal Required"
 ];
@@ -38,6 +39,7 @@ const getFullCollegeName = (val) => {
 const AdminDashboard = ({ user, role }) => {
   const [moas, setMoas] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [systemUsers, setSystemUsers] = useState([]);
   const [activeTab, setActiveTab] = useState('list');
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCollege, setFilterCollege] = useState("ALL");
@@ -56,7 +58,7 @@ const AdminDashboard = ({ user, role }) => {
     expiryDate: '',
     college: '',
     endorsedBy: '',
-    status: '',
+    status: 'PROCESSING: MOA draft sent to Legal Office for Review.',
     notes: ''
   });
 
@@ -66,14 +68,26 @@ const AdminDashboard = ({ user, role }) => {
   useEffect(() => {
     const unsubMOAs = subscribeToMOAs((data) => setMoas(data));
     let unsubAudit = () => {};
-    if (isAdmin) unsubAudit = subscribeToAudit((data) => setAuditLogs(data));
-    return () => { unsubMOAs(); unsubAudit(); };
+    let unsubUsers = () => {};
+    if (isAdmin) {
+      unsubAudit = subscribeToAudit((data) => setAuditLogs(data));
+      const q = query(collection(db, "users"));
+      unsubUsers = onSnapshot(q, (snap) => setSystemUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    }
+    return () => { unsubMOAs(); unsubAudit(); unsubUsers(); };
   }, [isAdmin]);
 
   const filteredMoas = useMemo(() => moas.filter(m => {
     if (!m) return false;
     const lowerSearch = searchTerm.toLowerCase();
-    const matchesSearch = String(m.companyName || '').toLowerCase().includes(lowerSearch) || String(m.hteId || '').toLowerCase().includes(lowerSearch);
+    const matchesSearch = 
+      String(m.companyName || '').toLowerCase().includes(lowerSearch) || 
+      String(m.hteId || '').toLowerCase().includes(lowerSearch) ||
+      String(m.contactPerson || '').toLowerCase().includes(lowerSearch) ||
+      String(m.address || '').toLowerCase().includes(lowerSearch) ||
+      String(m.industry || '').toLowerCase().includes(lowerSearch) ||
+      String(m.status || '').toLowerCase().includes(lowerSearch) ||
+      String(m.college || '').toLowerCase().includes(lowerSearch);
     const matchesCollege = filterCollege === "ALL" || String(m.college || '').toLowerCase().includes(filterCollege.toLowerCase()) || String(m.college || '').includes(COLLEGES.find(c => c.name === filterCollege)?.acronym);
     return !m.isDeleted && matchesSearch && matchesCollege;
   }), [moas, searchTerm, filterCollege]);
@@ -81,7 +95,14 @@ const AdminDashboard = ({ user, role }) => {
   const archivedMoas = useMemo(() => moas.filter(m => {
     if (!m) return false;
     const lowerSearch = searchTerm.toLowerCase();
-    const matchesSearch = String(m.companyName || '').toLowerCase().includes(lowerSearch) || String(m.hteId || '').toLowerCase().includes(lowerSearch);
+    const matchesSearch = 
+      String(m.companyName || '').toLowerCase().includes(lowerSearch) || 
+      String(m.hteId || '').toLowerCase().includes(lowerSearch) ||
+      String(m.contactPerson || '').toLowerCase().includes(lowerSearch) ||
+      String(m.address || '').toLowerCase().includes(lowerSearch) ||
+      String(m.industry || '').toLowerCase().includes(lowerSearch) ||
+      String(m.status || '').toLowerCase().includes(lowerSearch) ||
+      String(m.college || '').toLowerCase().includes(lowerSearch);
     const matchesCollege = filterCollege === "ALL" || String(m.college || '').toLowerCase().includes(filterCollege.toLowerCase()) || String(m.college || '').includes(COLLEGES.find(c => c.name === filterCollege)?.acronym);
     return m.isDeleted && matchesSearch && matchesCollege;
   }), [moas, searchTerm, filterCollege]);
@@ -140,6 +161,29 @@ const AdminDashboard = ({ user, role }) => {
     }
   };
 
+  const handleUpdateUserRole = async (email, newRole) => {
+    const loadToast = toast.loading('Updating role...');
+    try {
+      await updateDoc(doc(db, "users", email), { role: newRole });
+      toast.success('Role updated!', { id: loadToast });
+    } catch (err) {
+      toast.error('Failed to update role.', { id: loadToast });
+    }
+  };
+
+  const handleToggleBlock = async (email, currentStatus) => {
+    const action = currentStatus ? "unblock" : "block";
+    if (window.confirm(`Are you sure you want to ${action} this user?`)) {
+      const loadToast = toast.loading(`${currentStatus ? 'Unblocking' : 'Blocking'} user...`);
+      try {
+        await updateDoc(doc(db, "users", email), { blocked: !currentStatus });
+        toast.success(`User ${action}ed successfully!`, { id: loadToast });
+      } catch (err) {
+        toast.error(`Failed to ${action} user.`, { id: loadToast });
+      }
+    }
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditId(null);
@@ -154,7 +198,7 @@ const AdminDashboard = ({ user, role }) => {
       expiryDate: '',
       college: '',
       endorsedBy: '',
-      status: '',
+      status: 'PROCESSING: MOA draft sent to Legal Office for Review.',
       notes: ''
     });
   };
@@ -220,6 +264,7 @@ const AdminDashboard = ({ user, role }) => {
         </div>
         <nav className="flex-1 space-y-2">
           <SidebarBtn active={activeTab === 'list'} icon="dashboard" label="Directory" onClick={() => setActiveTab('list')} />
+          {isAdmin && <SidebarBtn active={activeTab === 'users'} icon="manage_accounts" label="User Management" onClick={() => setActiveTab('users')} />}
           {isAdmin && <SidebarBtn active={activeTab === 'audit' || activeTab === 'archive'} icon="history" label="Audit Trail" onClick={() => setActiveTab('audit')} />}
         </nav>
         
@@ -245,7 +290,7 @@ const AdminDashboard = ({ user, role }) => {
             >
               <span className="material-symbols-outlined">{isMobileMenuOpen ? 'close' : 'menu'}</span>
             </button>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">{activeTab === 'list' ? 'Directory' : activeTab === 'audit' ? 'Audit Trail' : 'Archive'}</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">{activeTab === 'list' ? 'Directory' : activeTab === 'audit' ? 'Audit Trail' : activeTab === 'users' ? 'User Management' : 'Archive'}</h2>
           </div>
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
             {activeTab === 'list' && (isAdmin || isStaff) && (
@@ -356,6 +401,56 @@ const AdminDashboard = ({ user, role }) => {
                 </div>
               )}
             </div>
+            ) : activeTab === 'users' && isAdmin ? (
+              <div className="bg-white/70 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all">
+                {/* Mobile View */}
+                <div className="sm:hidden divide-y divide-black/5">
+                  {systemUsers.map(sysUser => (
+                    <div key={sysUser.id} className="p-5 flex flex-col gap-4">
+                      <div>
+                        <div className="font-bold text-slate-800 line-clamp-1">{sysUser.name}</div>
+                        <div className="text-[10px] font-bold text-slate-500 font-mono mt-0.5">{sysUser.email}</div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <select value={sysUser.role || 'student'} onChange={(e) => handleUpdateUserRole(sysUser.email, e.target.value)} className="bg-black/[0.03] border border-transparent rounded-lg px-3 py-1.5 outline-none font-bold text-slate-700 text-xs focus:bg-white focus:ring-2 focus:ring-maroon/20 cursor-pointer transition-all">
+                          <option value="student">Student</option>
+                          <option value="staff">Faculty</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <button onClick={() => handleToggleBlock(sysUser.email, sysUser.blocked)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 ${sysUser.blocked ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}>
+                          {sysUser.blocked ? 'Unblock' : 'Block'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop View */}
+                <div className="hidden sm:block overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left border-collapse text-xs sm:text-sm relative">
+                    <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md font-bold text-[11px] text-slate-500 uppercase tracking-wider border-b border-black/5 shadow-sm">
+                      <tr><th className="p-3 sm:p-4 lg:p-6">User</th><th className="p-3 sm:p-4 lg:p-6">Role</th><th className="p-3 sm:p-4 lg:p-6">Status</th><th className="p-3 sm:p-4 lg:p-6 text-right">Actions</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/5">
+                      {systemUsers.map(sysUser => (
+                        <tr key={sysUser.id} className="hover:bg-black/[0.02] transition-colors duration-200">
+                          <td className="p-3 sm:p-4 lg:p-6"><div className="font-bold text-slate-800 line-clamp-1">{sysUser.name}</div><div className="text-[10px] text-slate-500 font-mono mt-0.5">{sysUser.email}</div></td>
+                          <td className="p-3 sm:p-4 lg:p-6">
+                            <select value={sysUser.role || 'student'} onChange={(e) => handleUpdateUserRole(sysUser.email, e.target.value)} className="bg-black/[0.03] border border-transparent rounded-lg px-3 py-1.5 outline-none font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-maroon/20 cursor-pointer transition-all">
+                              <option value="student">Student</option>
+                              <option value="staff">Faculty</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </td>
+                          <td className="p-3 sm:p-4 lg:p-6"><span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide w-fit ${sysUser.blocked ? 'bg-red-100/50 text-red-700' : 'bg-green-100/50 text-green-700'}`}><span className={`w-1.5 h-1.5 rounded-full ${sysUser.blocked ? 'bg-red-500' : 'bg-green-500'}`}></span>{sysUser.blocked ? 'Blocked' : 'Active'}</span></td>
+                          <td className="p-3 sm:p-4 lg:p-6 text-right">
+                            <button onClick={() => handleToggleBlock(sysUser.email, sysUser.blocked)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 ${sysUser.blocked ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}>{sysUser.blocked ? 'Unblock' : 'Block User'}</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             ) : activeTab === 'archive' && isAdmin ? (
               <ArchiveVault moas={archivedMoas} onRestore={handleRestore} onPermanentDelete={handlePermanentDelete} isAdmin={isAdmin} />
             ) : ( <AuditTable logs={auditLogs} /> )}
@@ -399,6 +494,16 @@ const AdminDashboard = ({ user, role }) => {
               >
                 <span className="material-symbols-outlined">dashboard</span> Directory
               </button>
+              {role === 'admin' && (
+                <button
+                  onClick={() => { setActiveTab('users'); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${
+                    activeTab === 'users' ? 'bg-gradient-to-r from-maroon to-red-700 text-white' : 'text-slate-600 hover:bg-black/5'
+                  }`}
+                >
+                  <span className="material-symbols-outlined">manage_accounts</span> User Management
+                </button>
+              )}
               {role === 'admin' && (
                 <button
                   onClick={() => { setActiveTab('audit'); setIsMobileMenuOpen(false); }}
@@ -481,7 +586,7 @@ const AdminDashboard = ({ user, role }) => {
 
       {/* Detail View Modal */}
       {selectedMoa && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-4 z-[70] animate-in fade-in duration-300" onClick={() => setSelectedMoa(null)}>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 z-[70] animate-in fade-in duration-300" onClick={() => setSelectedMoa(null)}>
           <div className="bg-white/90 backdrop-blur-3xl border border-black/5 w-full max-w-2xl rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-6 sm:px-8 sm:py-6 border-b border-black/5 shrink-0 bg-white/50 flex justify-between items-center">
               <div>
@@ -620,7 +725,7 @@ const StatusBadge = memo(({ status }) => {
   let bgColor = 'bg-slate-100/50 text-slate-700';
   let dotColor = 'bg-slate-400';
   if (safeStatus.includes('APPROVED')) { bgColor = 'bg-green-100/50 text-green-700'; dotColor = 'bg-green-500'; }
-  else if (safeStatus.includes('PENDING')) { bgColor = 'bg-blue-100/50 text-blue-700'; dotColor = 'bg-blue-500'; }
+  else if (safeStatus.includes('PROCESSING')) { bgColor = 'bg-blue-100/50 text-blue-700'; dotColor = 'bg-blue-500'; }
   else if (safeStatus.includes('EXPIRING')) { bgColor = 'bg-orange-100/50 text-orange-700'; dotColor = 'bg-orange-500'; }
   else if (safeStatus.includes('EXPIRED')) { bgColor = 'bg-red-100/50 text-red-700'; dotColor = 'bg-red-500'; }
   

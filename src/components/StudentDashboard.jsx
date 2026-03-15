@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useMemo } from 'react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { subscribeToMOAs } from '../services/moaService';
@@ -39,46 +39,21 @@ export const StudentDashboard = ({ user }) => {
     return unsubscribe;
   }, []);
 
-  const filteredMoas = moas.filter(moa => {
+  const filteredMoas = useMemo(() => moas.filter(moa => {
     if (!moa) return false;
     const lowerSearch = searchTerm.toLowerCase();
     
     const matchesSearch = String(moa.companyName || '').toLowerCase().includes(lowerSearch) ||
                           String(moa.contactPerson || '').toLowerCase().includes(lowerSearch) ||
-                          String(moa.address || '').toLowerCase().includes(lowerSearch);
+                          String(moa.address || '').toLowerCase().includes(lowerSearch) ||
+                          String(moa.industry || '').toLowerCase().includes(lowerSearch) ||
+                          String(moa.status || '').toLowerCase().includes(lowerSearch) ||
+                          String(moa.college || '').toLowerCase().includes(lowerSearch);
                           
     const matchesCollege = filterCollege === 'ALL' || String(moa.college || '').toLowerCase().includes(filterCollege.toLowerCase()) || String(moa.college || '').includes(COLLEGES.find(c => c.name === filterCollege)?.acronym);
     
     return matchesSearch && matchesCollege;
-  });
-
-  const formatDate = (dateValue) => {
-    if (!dateValue) return '-';
-    let d;
-    if (typeof dateValue.toDate === 'function') d = dateValue.toDate();
-    else if (dateValue.seconds) d = new Date(dateValue.seconds * 1000);
-    else d = new Date(dateValue);
-    return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  };
-
-  const getDaysRemaining = (expiryDate) => {
-    if (!expiryDate) return 'N/A';
-    let end;
-    if (typeof expiryDate.toDate === 'function') end = expiryDate.toDate();
-    else if (expiryDate.seconds) end = new Date(expiryDate.seconds * 1000);
-    else end = new Date(expiryDate);
-    if (isNaN(end.getTime())) return 'N/A';
-    
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    end.setHours(0,0,0,0);
-    const diffTime = end - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays > 0) return `${diffDays} days until renewal required`;
-    if (diffDays === 0) return `Expires today`;
-    return `Expired ${Math.abs(diffDays)} days ago`;
-  };
+  }), [moas, searchTerm, filterCollege]);
 
   return (
     <div className="flex min-h-screen bg-pattern antialiased flex-col lg:flex-row relative">
@@ -157,10 +132,9 @@ export const StudentDashboard = ({ user }) => {
                     style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}
                   >
                     <div className="font-bold tracking-tight text-slate-800 mb-1 line-clamp-1">{moa.companyName}</div>
-                    <div className="text-[10px] text-slate-500 font-mono tracking-wider mb-1">{moa.hteId}</div>
-                    <div className="text-[11px] font-bold text-slate-600 tracking-wider mb-3">Industry: {moa.industry || 'N/A'}</div>
-                    <div className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">{COLLEGES.find(c => c.name === moa.college || c.acronym === moa.college)?.acronym || moa.college}</div>
-                    <StatusBadge status={moa.status} />
+                    <div className="text-xs text-slate-600 mb-1 line-clamp-1">{moa.address || 'N/A'}</div>
+                    <div className="text-xs text-slate-600 mb-1">{moa.contactPerson || 'N/A'}</div>
+                    <div className="text-xs text-blue-600 hover:underline">{moa.contactEmail || 'N/A'}</div>
                   </div>
                 ))}
               </div>
@@ -170,10 +144,10 @@ export const StudentDashboard = ({ user }) => {
                 <table className="w-full text-left border-collapse text-xs sm:text-sm relative">
                   <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md font-bold text-[11px] text-slate-500 uppercase tracking-wider border-b border-black/5 shadow-sm">
                     <tr>
-                      <th className="p-4 sm:p-6">Partner & ID</th>
-                      <th className="p-4 sm:p-6 hidden lg:table-cell">Industry</th>
-                      <th className="p-4 sm:p-6">College</th>
-                      <th className="p-4 sm:p-6">Status</th>
+                      <th className="p-4 sm:p-6">Company Name</th>
+                      <th className="p-4 sm:p-6">Address</th>
+                      <th className="p-4 sm:p-6 hidden sm:table-cell">Contact Person</th>
+                      <th className="p-4 sm:p-6 hidden lg:table-cell">Email</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/5">
@@ -184,10 +158,10 @@ export const StudentDashboard = ({ user }) => {
                         onClick={() => setSelectedMoa(moa)}
                         style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}
                       >
-                        <td className="p-4 sm:p-6"><div className="font-bold tracking-tight text-slate-900 text-sm group-hover:text-maroon transition-colors duration-300 line-clamp-1">{moa.companyName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-mono tracking-wider line-clamp-1 mt-0.5">{moa.hteId}</div></td>
-                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden lg:table-cell">{moa.industry || '-'}</td>
-                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm uppercase tracking-wide">{COLLEGES.find(c => c.name === moa.college || c.acronym === moa.college)?.acronym || moa.college}</td>
-                        <td className="p-4 sm:p-6"><StatusBadge status={moa.status} /></td>
+                        <td className="p-4 sm:p-6"><div className="font-bold tracking-tight text-slate-900 text-sm group-hover:text-maroon transition-colors duration-300 line-clamp-1">{moa.companyName}</div></td>
+                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm line-clamp-2">{moa.address || 'N/A'}</td>
+                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden sm:table-cell">{moa.contactPerson || 'N/A'}</td>
+                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden lg:table-cell">{moa.contactEmail || 'N/A'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -216,13 +190,11 @@ export const StudentDashboard = ({ user }) => {
 
       {/* Detail View Modal */}
       {selectedMoa && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-4 z-[70] animate-in fade-in duration-300" onClick={() => setSelectedMoa(null)}>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 z-[70] animate-in fade-in duration-300" onClick={() => setSelectedMoa(null)}>
           <div className="bg-white/90 backdrop-blur-3xl border border-black/5 w-full max-w-2xl rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-6 sm:px-8 sm:py-6 border-b border-black/5 shrink-0 bg-white/50 flex justify-between items-center">
               <div>
                 <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">{selectedMoa.companyName}</h3>
-                <p className="text-xs font-bold text-slate-500 font-mono mt-1">{selectedMoa.hteId}</p>
-                <p className="text-xs font-bold text-slate-500 mt-1">Industry: {selectedMoa.industry || 'N/A'}</p>
               </div>
               <button onClick={() => setSelectedMoa(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors">
                 <span className="material-symbols-outlined block !text-xl">close</span>
@@ -230,22 +202,6 @@ export const StudentDashboard = ({ user }) => {
             </div>
             
             <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-8">
-              {/* Section: Partnership Details */}
-              <section>
-                <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Partnership Details</h4>
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Assigned College</p>
-                    <p className="text-sm font-bold text-slate-800">{getFullCollegeName(selectedMoa.college)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Endorsed By</p>
-                    <p className="text-sm font-bold text-slate-800">{getFullCollegeName(selectedMoa.endorsedBy)}</p>
-                  </div>
-                </div>
-              </section>
-
-              {/* Section A: Contact Information */}
               <section>
                 <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Contact Information</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -262,29 +218,6 @@ export const StudentDashboard = ({ user }) => {
                   <div className="sm:col-span-2">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Address</p>
                     <p className="text-sm font-bold text-slate-800">{selectedMoa.address || 'N/A'}</p>
-                  </div>
-                </div>
-              </section>
-
-              {/* Section B: Timeline & Compliance */}
-              <section>
-                <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Timeline & Compliance</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Effective Date</p>
-                    <p className="text-sm font-bold text-slate-800">{formatDate(selectedMoa.effectiveDate)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Expiry Date</p>
-                    <p className="text-sm font-bold text-slate-800">{formatDate(selectedMoa.expiryDate)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
-                    <StatusBadge status={selectedMoa.status} />
-                  </div>
-                  <div className="sm:col-span-3">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Days Remaining</p>
-                    <p className="text-sm font-bold text-slate-800">{getDaysRemaining(selectedMoa.expiryDate)}</p>
                   </div>
                 </div>
               </section>

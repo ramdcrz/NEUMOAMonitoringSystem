@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useMemo } from 'react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { subscribeToMOAs, createMOA, updateMOA } from '../services/moaService';
@@ -8,9 +8,9 @@ const MOA_STATUSES = [
   'APPROVED: Signed by President',
   'APPROVED: In Notarization',
   'APPROVED: Active (No Notarization)',
-  'PENDING: Partner Signature',
-  'PENDING: Legal Review',
-  'PENDING: University Approval',
+  'PROCESSING: Awaiting signature of the MOA draft by HTE partner.',
+  'PROCESSING: MOA draft sent to Legal Office for Review.',
+  'PROCESSING: MOA draft and Opinion of Legal Office sent to VPAA/OP for approval.',
   'EXPIRED: Terminated',
   'EXPIRING: Renewal Required'
 ];
@@ -53,7 +53,7 @@ export const FacultyDashboard = ({ user }) => {
     expiryDate: '',
     college: '',
     endorsedBy: '',
-    status: '',
+    status: 'PROCESSING: MOA draft sent to Legal Office for Review.',
     notes: ''
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -66,18 +66,21 @@ export const FacultyDashboard = ({ user }) => {
     return unsubscribe;
   }, []);
 
-  const filteredMoas = moas.filter(moa => {
+  const filteredMoas = useMemo(() => moas.filter(moa => {
     if (!moa) return false;
     const lowerSearch = searchTerm.toLowerCase();
     const matchesSearch = 
       String(moa.companyName || '').toLowerCase().includes(lowerSearch) ||
       String(moa.hteId || '').toLowerCase().includes(lowerSearch) ||
       String(moa.contactPerson || '').toLowerCase().includes(lowerSearch) ||
-      String(moa.address || '').toLowerCase().includes(lowerSearch);
+      String(moa.address || '').toLowerCase().includes(lowerSearch) ||
+      String(moa.industry || '').toLowerCase().includes(lowerSearch) ||
+      String(moa.status || '').toLowerCase().includes(lowerSearch) ||
+      String(moa.college || '').toLowerCase().includes(lowerSearch);
     
     const matchesCollege = selectedCollege === 'ALL' || String(moa.college || '').toLowerCase().includes(selectedCollege.toLowerCase()) || String(moa.college || '').includes(COLLEGES.find(c => c.name === selectedCollege)?.acronym);
     return matchesSearch && matchesCollege;
-  });
+  }), [moas, searchTerm, selectedCollege]);
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -93,7 +96,7 @@ export const FacultyDashboard = ({ user }) => {
       expiryDate: '',
       college: '',
       endorsedBy: '',
-      status: '',
+      status: 'PROCESSING: MOA draft sent to Legal Office for Review.',
       notes: ''
     });
   };
@@ -188,7 +191,7 @@ export const FacultyDashboard = ({ user }) => {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl z-50 lg:hidden flex items-start justify-end pt-16 pr-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 lg:hidden flex items-start justify-end pt-16 pr-4">
           <div className="bg-white/90 backdrop-blur-3xl border border-black/5 rounded-3xl p-6 w-full max-w-xs shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in slide-in-from-right duration-300">
             <nav className="space-y-3">
               <button onClick={() => { setIsMobileMenuOpen(false); setIsModalOpen(true); }} className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-maroon to-red-700 text-white font-bold text-left flex items-center gap-3 shadow-sm transition-all active:scale-95">
@@ -306,6 +309,7 @@ export const FacultyDashboard = ({ user }) => {
                       <th className="p-3 sm:p-4 hidden lg:table-cell">Industry</th>
                       <th className="p-3 sm:p-4 lg:p-6">College</th>
                       <th className="p-3 sm:p-4 hidden lg:table-cell">Status</th>
+                      <th className="p-3 sm:p-4 lg:p-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/5">
@@ -357,7 +361,7 @@ export const FacultyDashboard = ({ user }) => {
 
       {/* Detail View Modal */}
       {selectedMoa && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-4 z-[70] animate-in fade-in duration-300" onClick={() => setSelectedMoa(null)}>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 z-[70] animate-in fade-in duration-300" onClick={() => setSelectedMoa(null)}>
           <div className="bg-white/90 backdrop-blur-3xl border border-black/5 w-full max-w-2xl rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-6 sm:px-8 sm:py-6 border-b border-black/5 shrink-0 bg-white/50 flex justify-between items-center">
               <div>
@@ -481,7 +485,7 @@ export const FacultyDashboard = ({ user }) => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-4 z-[60] animate-in fade-in duration-300">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-in fade-in duration-400">
           <form onSubmit={handleSave} className="bg-white/90 backdrop-blur-3xl border border-black/5 w-full max-w-md rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col overflow-hidden">
             <div className="px-6 py-6 sm:px-8 sm:py-6 border-b border-black/5 shrink-0 bg-white/50">
               <h3 className="text-2xl font-bold tracking-tight text-slate-900">{editId ? 'Update' : 'New'} Agreement</h3>
@@ -529,7 +533,7 @@ const StatusBadge = memo(({ status }) => {
   let bgColor = 'bg-slate-100/50 text-slate-700';
   let dotColor = 'bg-slate-400';
   if (safeStatus.includes('APPROVED')) { bgColor = 'bg-green-100/50 text-green-700'; dotColor = 'bg-green-500'; }
-  else if (safeStatus.includes('PENDING')) { bgColor = 'bg-blue-100/50 text-blue-700'; dotColor = 'bg-blue-500'; }
+  else if (safeStatus.includes('PROCESSING')) { bgColor = 'bg-blue-100/50 text-blue-700'; dotColor = 'bg-blue-500'; }
   else if (safeStatus.includes('EXPIRING')) { bgColor = 'bg-orange-100/50 text-orange-700'; dotColor = 'bg-orange-500'; }
   else if (safeStatus.includes('EXPIRED')) { bgColor = 'bg-red-100/50 text-red-700'; dotColor = 'bg-red-500'; }
   

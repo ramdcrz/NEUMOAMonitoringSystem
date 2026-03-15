@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { auth, googleProvider, db } from '../firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const Login = ({ onLoginSuccess }) => {
   const [error, setError] = useState("");
@@ -24,8 +24,23 @@ const Login = ({ onLoginSuccess }) => {
       const userDoc = await getDoc(doc(db, "users", user.email));
       
       if (userDoc.exists()) {
-        onLoginSuccess(user, userDoc.data()?.role || "student");
+        const userData = userDoc.data();
+        
+        if (userData.blocked) {
+          setError("Account blocked by administrator.");
+          await signOut(auth);
+          return;
+        }
+        
+        onLoginSuccess(user, userData.role || "student");
       } else if (user.email.endsWith("@neu.edu.ph")) {
+        await setDoc(userDocRef, {
+          email: user.email,
+          name: user.displayName || user.email.split('@')[0],
+          role: "student",
+          blocked: false,
+          createdAt: serverTimestamp()
+        });
         onLoginSuccess(user, "student");
       } else {
         setError("Access Denied: Use @neu.edu.ph email.");

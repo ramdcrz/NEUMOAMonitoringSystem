@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useMemo } from 'react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { subscribeToMOAs } from '../services/moaService';
@@ -38,7 +38,7 @@ export const StatisticsDashboard = ({ user }) => {
     return isNaN(d.getTime()) ? null : d;
   };
 
-  const filteredMoas = moas.filter(moa => {
+  const filteredMoas = useMemo(() => moas.filter(moa => {
     if (!moa) return false;
     const collegeMatch = selectedCollege === 'ALL' || String(moa.college || '').includes(selectedCollege);
     
@@ -55,15 +55,15 @@ export const StatisticsDashboard = ({ user }) => {
     }
     
     return collegeMatch && dateMatch;
-  });
+  }), [moas, selectedCollege, startDate, endDate]);
 
-  const stats = {
+  const stats = useMemo(() => ({
     active: filteredMoas.filter(m => String(m.status || '').includes('APPROVED')).length,
-    pending: filteredMoas.filter(m => String(m.status || '').includes('PENDING')).length,
+    pending: filteredMoas.filter(m => String(m.status || '').includes('PROCESSING')).length,
     expired: filteredMoas.filter(m => String(m.status || '').includes('EXPIRED')).length,
     expiring: filteredMoas.filter(m => String(m.status || '').includes('EXPIRING')).length,
     total: filteredMoas.length
-  };
+  }), [filteredMoas]);
 
   return (
     <div className="flex h-screen bg-pattern font-sans antialiased overflow-hidden flex-col lg:flex-row">
@@ -75,7 +75,7 @@ export const StatisticsDashboard = ({ user }) => {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl z-50 lg:hidden">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 lg:hidden">
           <div className="bg-white/90 backdrop-blur-3xl border border-black/5 rounded-3xl p-6 m-4 w-full max-w-xs shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in slide-in-from-top-4 duration-300">
             <nav className="space-y-3">
               <div className="px-4 py-3 rounded-xl bg-maroon text-white font-bold text-left flex items-center gap-3 shadow-sm">
@@ -152,7 +152,7 @@ export const StatisticsDashboard = ({ user }) => {
             />
             <StatCard
               icon="schedule"
-              label="Pending MOAs"
+              label="Processing MOAs"
               value={stats.pending}
               color="text-blue-700"
               bgColor="bg-blue-100/50"
@@ -189,7 +189,7 @@ export const StatisticsDashboard = ({ user }) => {
               </div>
               <div className="animate-in fade-in duration-500" style={{ animationDelay: '200ms' }}>
                 <p className="text-4xl font-bold tracking-tight text-blue-700 mb-2">{Math.round((stats.pending / stats.total) * 100) || 0}%</p>
-                <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Pending Rate</p>
+                <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Processing Rate</p>
               </div>
               <div className="animate-in fade-in duration-500" style={{ animationDelay: '300ms' }}>
                 <p className="text-4xl font-bold tracking-tight text-red-700 mb-2">{Math.round((stats.expired / stats.total) * 100) || 0}%</p>
