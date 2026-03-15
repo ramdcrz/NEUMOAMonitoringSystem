@@ -135,13 +135,13 @@ const AdminDashboard = ({ user, role }) => {
     });
   };
 
-  const formatDate = (dateValue, options) => {
+  const formatDate = (dateValue) => {
     if (!dateValue) return '-';
     let d;
     if (typeof dateValue.toDate === 'function') d = dateValue.toDate();
     else if (dateValue.seconds) d = new Date(dateValue.seconds * 1000);
     else d = new Date(dateValue);
-    return isNaN(d.getTime()) ? '-' : (options ? d.toLocaleDateString('en-PH', options) : d.toLocaleDateString());
+    return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
   return (
@@ -164,10 +164,19 @@ const AdminDashboard = ({ user, role }) => {
         </div>
         <nav className="flex-1 space-y-2">
           <SidebarBtn active={activeTab === 'list'} icon="dashboard" label="Directory" onClick={() => setActiveTab('list')} />
-          {isAdmin && <SidebarBtn active={activeTab === 'archive'} icon="inventory_2" label="Archive Vault" onClick={() => setActiveTab('archive')} />}
-          {isAdmin && <SidebarBtn active={activeTab === 'audit'} icon="history" label="Audit Trail" onClick={() => setActiveTab('audit')} />}
+          {isAdmin && <SidebarBtn active={activeTab === 'audit' || activeTab === 'archive'} icon="history" label="Audit Trail" onClick={() => setActiveTab('audit')} />}
         </nav>
-        <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 rounded-xl font-bold text-slate-700 flex items-center justify-center gap-2 transition-all active:scale-95"><span className="material-symbols-outlined !text-lg">logout</span> <span className="hidden sm:inline">Sign Out</span></button>
+        
+        <div className="mt-auto pt-6 w-full border-t border-black/5">
+          <div className="flex items-center gap-3 px-2 mb-4">
+            <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover" />
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-sm text-slate-900 truncate">{user?.displayName || user?.email?.split('@')[0]}</span>
+              <span className="text-[10px] font-medium text-slate-500 truncate">{user?.email}</span>
+            </div>
+          </div>
+          <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 rounded-xl font-bold text-slate-700 flex items-center justify-center gap-2 transition-all active:scale-95 w-full"><span className="material-symbols-outlined !text-lg">logout</span> <span className="hidden sm:inline">Sign Out</span></button>
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -188,6 +197,12 @@ const AdminDashboard = ({ user, role }) => {
                 <button onClick={() => exportMOAsToPDF(moas)} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-black/5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">description</span> <span className="hidden sm:inline">Export PDF</span></button>
                 <button onClick={() => setIsModalOpen(true)} className="bg-maroon text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:bg-maroon/90 flex items-center gap-2 transition-all active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">add</span> New Entry</button>
               </>
+            )}
+            {activeTab === 'audit' && isAdmin && (
+              <button onClick={() => setActiveTab('archive')} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-black/5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg text-slate-400">inventory_2</span> Archive Vault</button>
+            )}
+            {activeTab === 'archive' && isAdmin && (
+              <button onClick={() => setActiveTab('audit')} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-black/5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg text-slate-400">arrow_back</span> Back to Audit</button>
             )}
           </div>
         </header>
@@ -214,7 +229,7 @@ const AdminDashboard = ({ user, role }) => {
               </div>
 
               {filteredMoas.length > 0 ? (
-                <div className="bg-white/70 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all flex flex-col">
+                <div className="bg-white/70 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all">
                   {/* Mobile View: Cards */}
                   <div className="sm:hidden divide-y divide-black/5">
                     {filteredMoas.map((moa, index) => (
@@ -238,7 +253,7 @@ const AdminDashboard = ({ user, role }) => {
                   </div>
                   
                   {/* Desktop View: Table */}
-                  <div className="hidden sm:block overflow-x-auto custom-scrollbar flex-1">
+                  <div className="hidden sm:block overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse text-xs sm:text-sm relative">
                       <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md font-bold text-[11px] text-slate-500 uppercase tracking-wider border-b border-black/5 shadow-sm">
                       <tr><th className="p-2 sm:p-4 lg:p-6">Partner</th><th className="p-2 sm:p-4 lg:p-6">Contact</th><th className="p-2 sm:p-4 lg:p-6 hidden sm:table-cell">Industry</th><th className="p-2 sm:p-4 lg:p-6">College</th><th className="p-2 sm:p-4 lg:p-6 hidden lg:table-cell">Effective</th><th className="p-2 sm:p-4 lg:p-6">Status</th>{(isAdmin || isStaff) && <th className="p-2 sm:p-4 lg:p-6 text-right">Actions</th>}</tr>
@@ -250,7 +265,7 @@ const AdminDashboard = ({ user, role }) => {
                           <td className="p-2 sm:p-4 lg:p-6 text-slate-700 text-xs sm:text-sm"><div className="font-bold">{moa.contactPerson || '-'}</div><div className="text-[9px] sm:text-[10px] text-slate-500 truncate mt-0.5">{moa.contactEmail || '-'}</div></td>
                           <td className="p-2 sm:p-4 lg:p-6 text-slate-600 text-xs sm:text-sm whitespace-nowrap hidden sm:table-cell">{moa.industry || '-'}</td>
                           <td className="p-2 sm:p-4 lg:p-6 text-slate-600 uppercase text-xs sm:text-xs whitespace-nowrap tracking-wide">{moa.college}</td>
-                          <td className="p-2 sm:p-4 lg:p-6 text-slate-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">{formatDate(moa.effectiveDate, { month: 'short', day: 'numeric', year: '2-digit' })}</td>
+                          <td className="p-2 sm:p-4 lg:p-6 text-slate-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">{formatDate(moa.effectiveDate)}</td>
                           <td className="p-2 sm:p-4 lg:p-6"><StatusBadge status={moa.status} /></td>
                           {(isAdmin || isStaff) && (
                             <td className="p-2 sm:p-4 lg:p-6 text-right space-x-1 sm:space-x-2 flex justify-end">
@@ -318,19 +333,9 @@ const AdminDashboard = ({ user, role }) => {
               </button>
               {role === 'admin' && (
                 <button
-                  onClick={() => { setActiveTab('archive'); setIsMobileMenuOpen(false); }}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${
-                    activeTab === 'archive' ? 'bg-maroon text-white' : 'text-slate-600 hover:bg-black/5'
-                  }`}
-                >
-                  <span className="material-symbols-outlined">inventory_2</span> Archive Vault
-                </button>
-              )}
-              {role === 'admin' && (
-                <button
                   onClick={() => { setActiveTab('audit'); setIsMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${
-                    activeTab === 'audit' ? 'bg-maroon text-white' : 'text-slate-600 hover:bg-black/5'
+                    (activeTab === 'audit' || activeTab === 'archive') ? 'bg-maroon text-white' : 'text-slate-600 hover:bg-black/5'
                   }`}
                 >
                   <span className="material-symbols-outlined">history</span> Audit Trail
@@ -338,7 +343,16 @@ const AdminDashboard = ({ user, role }) => {
               )}
             </nav>
             
-            <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 rounded-xl font-bold text-slate-700 active:scale-95 flex items-center justify-center gap-2 transition-all"><span className="material-symbols-outlined">logout</span> Sign Out</button>
+            <div className="mt-auto pt-6 w-full border-t border-black/5">
+              <div className="flex items-center gap-3 px-2 mb-4">
+                <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover" />
+                <div className="flex flex-col min-w-0">
+                  <span className="font-bold text-sm text-slate-900 truncate">{user?.displayName || user?.email?.split('@')[0]}</span>
+                  <span className="text-[10px] font-medium text-slate-500 truncate">{user?.email}</span>
+                </div>
+              </div>
+              <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 rounded-xl font-bold text-slate-700 active:scale-95 flex items-center justify-center gap-2 transition-all w-full"><span className="material-symbols-outlined">logout</span> Sign Out</button>
+            </div>
           </div>
         </div>
       )}
@@ -444,9 +458,11 @@ const SelectField = memo(({ label, value, options, onChange }) => (
 const AuditTable = memo(({ logs }) => {
   const formatTimestamp = (ts) => {
     if (!ts) return 'N/A';
-    if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString();
-    if (ts.seconds) return new Date(ts.seconds * 1000).toLocaleString();
-    return new Date(ts).toLocaleString();
+    let d;
+    if (typeof ts.toDate === 'function') d = ts.toDate();
+    else if (ts.seconds) d = new Date(ts.seconds * 1000);
+    else d = new Date(ts);
+    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
   return (
@@ -485,7 +501,7 @@ const AuditTable = memo(({ logs }) => {
         </div>
 
         {/* Desktop View: Table */}
-        <div className="hidden sm:block overflow-x-auto custom-scrollbar flex-1">
+        <div className="hidden sm:block overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs sm:text-sm relative">
             <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md font-bold text-[11px] text-slate-500 uppercase tracking-wider border-b border-black/5 shadow-sm">
               <tr>
@@ -533,7 +549,7 @@ const AuditTable = memo(({ logs }) => {
 const ArchiveVault = memo(({ moas, onRestore, onPermanentDelete, isAdmin }) => (
   <div className="space-y-5">
     {moas.length > 0 ? (
-      <div className="bg-white/70 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all flex flex-col">
+      <div className="bg-white/70 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all">
         {/* Mobile View */}
         <div className="sm:hidden divide-y divide-black/5">
           {moas.map(moa => (
@@ -557,7 +573,7 @@ const ArchiveVault = memo(({ moas, onRestore, onPermanentDelete, isAdmin }) => (
         </div>
 
         {/* Desktop View */}
-        <div className="hidden sm:block overflow-x-auto custom-scrollbar flex-1">
+        <div className="hidden sm:block overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs sm:text-sm relative">
             <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md font-bold text-[11px] text-slate-500 uppercase tracking-wider border-b border-black/5 shadow-sm">
               <tr>

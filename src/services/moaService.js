@@ -7,7 +7,8 @@ import {
   onSnapshot, 
   query, 
   orderBy, 
-  serverTimestamp 
+  serverTimestamp,
+  deleteDoc
 } from "firebase/firestore";
 
 // Helper for Logging
@@ -56,4 +57,16 @@ export const archiveMOA = async (moaId, companyName, currentUser) => {
   const moaRef = doc(db, "moas", moaId);
   await updateDoc(moaRef, { isDeleted: true });
   await logAction(currentUser.displayName || "User", currentUser.email, "ARCHIVE", companyName, "MOA archived");
+};
+
+export const restoreMOA = async (moaId, companyName, currentUser) => {
+  const moaRef = doc(db, "moas", moaId);
+  await updateDoc(moaRef, { isDeleted: false, lastModified: serverTimestamp() });
+  await logAction(currentUser.displayName || "User", currentUser.email, "RESTORE", companyName, "MOA restored from archive");
+};
+
+export const deleteMOAPermanently = async (moaId, companyName, currentUser) => {
+  const moaRef = doc(db, "moas", moaId);
+  await deleteDoc(moaRef);
+  await logAction(currentUser.displayName || "User", currentUser.email, "PERMANENT_DELETE", companyName, "MOA permanently deleted");
 };
