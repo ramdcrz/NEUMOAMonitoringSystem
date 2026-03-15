@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect } from 'react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { subscribeToMOAs } from '../services/moaService';
@@ -19,11 +19,21 @@ export const StudentDashboard = ({ user }) => {
   }, []);
 
   const filteredMoas = moas.filter(moa => {
+    if (!moa) return false;
     const lowerSearch = searchTerm.toLowerCase();
     return String(moa.companyName || '').toLowerCase().includes(lowerSearch) ||
            String(moa.contactPerson || '').toLowerCase().includes(lowerSearch) ||
            String(moa.address || '').toLowerCase().includes(lowerSearch);
   });
+
+  const formatDate = (dateValue, options) => {
+    if (!dateValue) return 'N/A';
+    let d;
+    if (typeof dateValue.toDate === 'function') d = dateValue.toDate();
+    else if (dateValue.seconds) d = new Date(dateValue.seconds * 1000);
+    else d = new Date(dateValue);
+    return isNaN(d.getTime()) ? 'N/A' : (options ? d.toLocaleDateString('en-PH', options) : d.toLocaleDateString());
+  };
 
   return (
     <div className="flex min-h-screen bg-pattern antialiased flex-col lg:flex-row relative">
@@ -100,7 +110,7 @@ export const StudentDashboard = ({ user }) => {
                       <div><span className="text-slate-400 mr-1">Address:</span> {moa.address || 'N/A'}</div>
                       <div><span className="text-slate-400 mr-1">Contact:</span> {moa.contactPerson || 'N/A'}</div>
                       <div><span className="text-slate-400 mr-1">Email:</span> {moa.contactEmail || 'N/A'}</div>
-                      <div><span className="text-slate-400 mr-1">Effective:</span> {moa.effectiveDate ? new Date(moa.effectiveDate).toLocaleDateString() : 'N/A'}</div>
+                      <div><span className="text-slate-400 mr-1">Effective:</span> {formatDate(moa.effectiveDate)}</div>
                     </div>
                     <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-md bg-green-100/50 text-green-700 uppercase tracking-wide w-fit">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
@@ -133,7 +143,7 @@ export const StudentDashboard = ({ user }) => {
                         <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm line-clamp-1">{moa.address || 'N/A'}</td>
                         <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden lg:table-cell">{moa.contactPerson || 'N/A'}</td>
                         <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden xl:table-cell line-clamp-1">{moa.contactEmail || 'N/A'}</td>
-                        <td className="p-4 sm:p-6 text-slate-600 text-xs sm:text-sm hidden lg:table-cell text-right">{moa.effectiveDate ? new Date(moa.effectiveDate).toLocaleDateString('en-PH', { month: 'short', day: '2-digit', year: '2-digit' }) : 'N/A'}</td>
+                        <td className="p-4 sm:p-6 text-slate-600 text-xs sm:text-sm hidden lg:table-cell text-right">{formatDate(moa.effectiveDate, { month: 'short', day: '2-digit', year: '2-digit' })}</td>
                       </tr>
                     ))}
                   </tbody>

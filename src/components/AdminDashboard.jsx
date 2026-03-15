@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import toast from 'react-hot-toast';
@@ -53,6 +53,7 @@ const AdminDashboard = ({ user, role }) => {
   }, [isAdmin]);
 
   const filteredMoas = useMemo(() => moas.filter(m => {
+    if (!m) return false;
     const lowerSearch = searchTerm.toLowerCase();
     const matchesSearch = String(m.companyName || '').toLowerCase().includes(lowerSearch) || String(m.hteId || '').toLowerCase().includes(lowerSearch);
     const matchesCollege = filterCollege === "ALL" || m.college === filterCollege;
@@ -60,6 +61,7 @@ const AdminDashboard = ({ user, role }) => {
   }), [moas, searchTerm, filterCollege]);
 
   const archivedMoas = useMemo(() => moas.filter(m => {
+    if (!m) return false;
     const lowerSearch = searchTerm.toLowerCase();
     const matchesSearch = String(m.companyName || '').toLowerCase().includes(lowerSearch) || String(m.hteId || '').toLowerCase().includes(lowerSearch);
     const matchesCollege = filterCollege === "ALL" || m.college === filterCollege;
@@ -131,6 +133,15 @@ const AdminDashboard = ({ user, role }) => {
       status: 'PENDING: Legal Review',
       notes: ''
     });
+  };
+
+  const formatDate = (dateValue, options) => {
+    if (!dateValue) return '-';
+    let d;
+    if (typeof dateValue.toDate === 'function') d = dateValue.toDate();
+    else if (dateValue.seconds) d = new Date(dateValue.seconds * 1000);
+    else d = new Date(dateValue);
+    return isNaN(d.getTime()) ? '-' : (options ? d.toLocaleDateString('en-PH', options) : d.toLocaleDateString());
   };
 
   return (
@@ -213,10 +224,9 @@ const AdminDashboard = ({ user, role }) => {
                           <div>{moa.hteId}</div>
                           <div>{moa.contactPerson}</div>
                         </div>
-                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide whitespace-nowrap w-fit mb-3 ${moa.status?.includes('APPROVED') ? 'bg-green-100/50 text-green-700' : moa.status?.includes('PENDING') ? 'bg-blue-100/50 text-blue-700' : moa.status?.includes('EXPIRING') ? 'bg-orange-100/50 text-orange-700' : 'bg-red-100/50 text-red-700'}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${moa.status?.includes('APPROVED') ? 'bg-green-500' : moa.status?.includes('PENDING') ? 'bg-blue-500' : moa.status?.includes('EXPIRING') ? 'bg-orange-500' : 'bg-red-500'}`}></span>
-                          {moa.status?.split(':')[0]}
-                        </span>
+                        <div className="mb-3">
+                          <StatusBadge status={moa.status} />
+                        </div>
                         {(isAdmin || isStaff) && (
                           <div className="flex gap-2 mt-1">
                             <button onClick={() => { setEditId(moa.id); setFormData(moa); setIsModalOpen(true); }} className="px-3 py-1.5 rounded-md font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 text-xs transition-colors"><span className="material-symbols-outlined !text-sm">edit</span></button>
@@ -240,7 +250,7 @@ const AdminDashboard = ({ user, role }) => {
                           <td className="p-2 sm:p-4 lg:p-6 text-slate-700 text-xs sm:text-sm"><div className="font-bold">{moa.contactPerson || '-'}</div><div className="text-[9px] sm:text-[10px] text-slate-500 truncate mt-0.5">{moa.contactEmail || '-'}</div></td>
                           <td className="p-2 sm:p-4 lg:p-6 text-slate-600 text-xs sm:text-sm whitespace-nowrap hidden sm:table-cell">{moa.industry || '-'}</td>
                           <td className="p-2 sm:p-4 lg:p-6 text-slate-600 uppercase text-xs sm:text-xs whitespace-nowrap tracking-wide">{moa.college}</td>
-                          <td className="p-2 sm:p-4 lg:p-6 text-slate-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">{moa.effectiveDate ? new Date(moa.effectiveDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: '2-digit' }) : '-'}</td>
+                          <td className="p-2 sm:p-4 lg:p-6 text-slate-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">{formatDate(moa.effectiveDate, { month: 'short', day: 'numeric', year: '2-digit' })}</td>
                           <td className="p-2 sm:p-4 lg:p-6"><StatusBadge status={moa.status} /></td>
                           {(isAdmin || isStaff) && (
                             <td className="p-2 sm:p-4 lg:p-6 text-right space-x-1 sm:space-x-2 flex justify-end">

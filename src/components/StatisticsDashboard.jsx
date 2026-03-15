@@ -19,18 +19,27 @@ export const StatisticsDashboard = ({ user }) => {
     return unsubscribe;
   }, []);
 
+  const parseDate = (dateValue) => {
+    if (!dateValue) return null;
+    if (typeof dateValue.toDate === 'function') return dateValue.toDate();
+    if (dateValue.seconds) return new Date(dateValue.seconds * 1000);
+    const d = new Date(dateValue);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
   const filteredMoas = moas.filter(moa => {
+    if (!moa) return false;
     const collegeMatch = selectedCollege === 'All' || moa.college === selectedCollege;
     
     let dateMatch = true;
     if (startDate) {
       const start = new Date(startDate);
-      const effectiveDate = moa.effectiveDate ? new Date(moa.effectiveDate) : null;
+      const effectiveDate = parseDate(moa.effectiveDate);
       if (effectiveDate) dateMatch = dateMatch && effectiveDate >= start;
     }
     if (endDate) {
       const end = new Date(endDate);
-      const expiryDate = moa.expiryDate ? new Date(moa.expiryDate) : null;
+      const expiryDate = parseDate(moa.expiryDate);
       if (expiryDate) dateMatch = dateMatch && expiryDate <= end;
     }
     
@@ -44,19 +53,6 @@ export const StatisticsDashboard = ({ user }) => {
     expiring: filteredMoas.filter(m => String(m.status || '').includes('EXPIRING')).length,
     total: filteredMoas.length
   };
-
-  const StatCard = memo(({ icon, label, value, color, bgColor }) => (
-    <div className={`bg-white/70 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] hover:bg-white/90 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2`}>
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <p className="text-slate-500 font-bold text-[11px] uppercase tracking-wider mb-1">{label}</p>
-          <p className={`text-3xl sm:text-5xl font-bold tracking-tight ${color}`}>{value}</p>
-        </div>
-        <div className={`p-3 rounded-xl ${bgColor} flex items-center justify-center`}><span className={`material-symbols-outlined !text-3xl ${color}`}>{icon}</span></div>
-      </div>
-      <p className="text-[11px] text-slate-500 font-bold">Total MOAs: {stats.total}</p>
-    </div>
-  ));
 
   return (
     <div className="flex h-screen bg-pattern font-sans antialiased overflow-hidden flex-col lg:flex-row">
@@ -141,6 +137,7 @@ export const StatisticsDashboard = ({ user }) => {
               value={stats.active}
               color="text-green-700"
               bgColor="bg-green-100/50"
+              total={stats.total}
             />
             <StatCard
               icon="schedule"
@@ -148,6 +145,7 @@ export const StatisticsDashboard = ({ user }) => {
               value={stats.pending}
               color="text-blue-700"
               bgColor="bg-blue-100/50"
+              total={stats.total}
             />
             <StatCard
               icon="event_busy"
@@ -155,6 +153,7 @@ export const StatisticsDashboard = ({ user }) => {
               value={stats.expired}
               color="text-red-700"
               bgColor="bg-red-100/50"
+              total={stats.total}
             />
             <StatCard
               icon="schedule_close"
@@ -162,6 +161,7 @@ export const StatisticsDashboard = ({ user }) => {
               value={stats.expiring}
               color="text-orange-700"
               bgColor="bg-orange-100/50"
+              total={stats.total}
             />
           </div>
 
@@ -192,7 +192,7 @@ export const StatisticsDashboard = ({ user }) => {
             <h3 className="text-xl font-bold tracking-tight text-slate-900 mb-6">Agreements by College</h3>
             <div className="space-y-3">
               {COLLEGES.filter(c => c !== 'All').map((college, index) => {
-                const collegeCount = moas.filter(m => m.college === college && !m.isDeleted).length;
+                const collegeCount = moas.filter(m => m && m.college === college && !m.isDeleted).length;
                 const collegePercentage = stats.total > 0 ? Math.round((collegeCount / stats.total) * 100) : 0;
                 return (
                   <div 
@@ -220,6 +220,19 @@ export const StatisticsDashboard = ({ user }) => {
     </div>
   );
 };
+
+const StatCard = memo(({ icon, label, value, color, bgColor, total }) => (
+  <div className={`bg-white/70 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] hover:bg-white/90 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2`}>
+    <div className="flex items-start justify-between mb-4">
+      <div>
+        <p className="text-slate-500 font-bold text-[11px] uppercase tracking-wider mb-1">{label}</p>
+        <p className={`text-3xl sm:text-5xl font-bold tracking-tight ${color}`}>{value}</p>
+      </div>
+      <div className={`p-3 rounded-xl ${bgColor} flex items-center justify-center transition-transform duration-500 hover:rotate-12 hover:scale-110`}><span className={`material-symbols-outlined !text-3xl ${color}`}>{icon}</span></div>
+    </div>
+    <p className="text-[11px] text-slate-500 font-bold">Total MOAs: {total}</p>
+  </div>
+));
 
 const FilterSelect = memo(({ label, value, onChange, options }) => (
   <div className="text-left">

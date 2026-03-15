@@ -1,7 +1,7 @@
 import { useState, useEffect, memo } from 'react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
-import { subscribeToMOAs, createMOA, updateMOA, archiveMOA } from '../services/moaService';
+import { subscribeToMOAs, createMOA, updateMOA } from '../services/moaService';
 import toast from 'react-hot-toast';
 
 const MOA_STATUSES = [
@@ -49,6 +49,7 @@ export const FacultyDashboard = ({ user }) => {
   }, []);
 
   const filteredMoas = moas.filter(moa => {
+    if (!moa) return false;
     const lowerSearch = searchTerm.toLowerCase();
     const matchesSearch = 
       String(moa.companyName || '').toLowerCase().includes(lowerSearch) ||
