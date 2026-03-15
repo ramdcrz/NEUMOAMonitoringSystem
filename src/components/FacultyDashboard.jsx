@@ -29,6 +29,12 @@ const COLLEGES = [
   { name: "College of Nursing", acronym: "CON" }
 ];
 
+const getFullCollegeName = (val) => {
+  if (!val) return 'N/A';
+  const match = COLLEGES.find(c => c.name === val || c.acronym === val || String(val).includes(c.acronym));
+  return match && match.name !== "ALL" ? match.name : val;
+};
+
 export const FacultyDashboard = ({ user }) => {
   const [moas, setMoas] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,12 +48,12 @@ export const FacultyDashboard = ({ user }) => {
     address: '',
     contactPerson: '',
     contactEmail: '',
-    industry: 'Technology',
+    industry: '',
     effectiveDate: '',
     expiryDate: '',
-    college: 'College of Informatics and Computing Studies',
+    college: '',
     endorsedBy: '',
-    status: 'PENDING: Legal Review',
+    status: '',
     notes: ''
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -69,7 +75,7 @@ export const FacultyDashboard = ({ user }) => {
       String(moa.contactPerson || '').toLowerCase().includes(lowerSearch) ||
       String(moa.address || '').toLowerCase().includes(lowerSearch);
     
-    const matchesCollege = selectedCollege === 'ALL' || String(moa.college || '').includes(selectedCollege);
+    const matchesCollege = selectedCollege === 'ALL' || String(moa.college || '').toLowerCase().includes(selectedCollege.toLowerCase()) || String(moa.college || '').includes(COLLEGES.find(c => c.name === selectedCollege)?.acronym);
     return matchesSearch && matchesCollege;
   });
 
@@ -82,18 +88,24 @@ export const FacultyDashboard = ({ user }) => {
       address: '',
       contactPerson: '',
       contactEmail: '',
-      industry: 'Technology',
+      industry: '',
       effectiveDate: '',
       expiryDate: '',
-      college: 'College of Informatics and Computing Studies',
+      college: '',
       endorsedBy: '',
-      status: 'PENDING: Legal Review',
+      status: '',
       notes: ''
     });
   };
 
   const handleSave = async e => {
     e.preventDefault();
+    
+    if (formData.effectiveDate && formData.expiryDate && formData.expiryDate <= formData.effectiveDate) {
+      toast.error('Expiry date must be strictly after the Effective Date.');
+      return;
+    }
+
     try {
       if (editId) {
         await updateMOA(editId, formData, user);
@@ -163,7 +175,7 @@ export const FacultyDashboard = ({ user }) => {
     <div className="flex min-h-screen bg-pattern antialiased flex-col lg:flex-row relative">
 
       {/* Animated Background Orbs */}
-      <div className="absolute inset-0 pointer-events-none z-0">
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-maroon/20 blur-[120px] animate-pulse"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[35vw] h-[35vw] rounded-full bg-blue-500/15 blur-[120px] animate-pulse" style={{ animationDelay: '2s', animationDuration: '6s' }}></div>
       </div>
@@ -223,26 +235,24 @@ export const FacultyDashboard = ({ user }) => {
       <main className="flex-1 flex flex-col min-w-0 w-full">
         <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-5">
           {/* Search & Filter */}
-          <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1 flex items-center gap-3 bg-black/[0.03] border border-transparent focus-within:bg-white focus-within:border-maroon/20 focus-within:ring-4 focus-within:ring-maroon/10 rounded-xl px-4 py-3 transition-all group">
-                <div className="flex items-center justify-center pointer-events-none">
-                  <span className="material-symbols-outlined text-slate-400 !text-xl group-focus-within:text-maroon transition-colors">search</span>
-                </div>
-                <input type="text" placeholder="Search by name, ID, contact..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full outline-none bg-transparent font-bold text-slate-800 placeholder:text-slate-400 text-sm sm:text-base pr-4" />
+          <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all duration-500">
+            <div className="flex flex-row gap-2 sm:gap-3 w-full">
+              <div className="relative flex-1 flex items-center gap-2 px-3 sm:px-4 py-3 bg-black/[0.03] border border-transparent rounded-xl sm:rounded-2xl focus-within:bg-white focus-within:ring-4 focus-within:ring-maroon/10 focus-within:border-maroon/20 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 group">
+                <span className="material-symbols-outlined text-slate-400 !text-xl shrink-0 group-focus-within:text-maroon transition-colors">search</span>
+                <input type="text" placeholder="Search by name, ID, contact..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-transparent outline-none font-bold text-sm sm:text-base text-slate-900 placeholder:text-slate-400" />
                 {searchTerm && (
-                  <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-maroon transition-colors flex items-center justify-center hover:scale-110 active:scale-95">
+                  <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-maroon transition-colors shrink-0 flex items-center justify-center hover:scale-110 active:scale-95">
                     <span className="material-symbols-outlined !text-lg">close</span>
                   </button>
                 )}
               </div>
-              <div className="relative w-full sm:w-32 group flex-shrink-0">
+              <div className="relative w-24 sm:w-32 shrink-0 group">
                 <select value={selectedCollege} onChange={e => setSelectedCollege(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                   {COLLEGES.map(c => <option key={c.acronym} value={c.name}>{c.name}</option>)}
                 </select>
-                <div className="w-full p-3 bg-gradient-to-r from-maroon to-red-700 rounded-2xl shadow-sm font-bold text-white flex items-center justify-between group-hover:-translate-y-0.5 group-hover:shadow-md transition-all group-focus-within:ring-4 group-focus-within:ring-red-500/30">
-                  <span className="truncate pr-2">{COLLEGES.find(c => c.name === selectedCollege)?.acronym || 'ALL'}</span>
-                  <span className="material-symbols-outlined !text-lg text-white/80">arrow_drop_down</span>
+                <div className="w-full h-full px-2 sm:px-3 bg-gradient-to-r from-maroon to-red-700 rounded-xl sm:rounded-2xl shadow-sm font-bold text-white flex items-center justify-center gap-1 group-hover:-translate-y-0.5 group-hover:shadow-md transition-all group-focus-within:ring-4 group-focus-within:ring-red-500/30">
+                  <span className="truncate text-xs sm:text-sm">{COLLEGES.find(c => c.name === selectedCollege)?.acronym || 'ALL'}</span>
+                  <span className="material-symbols-outlined !text-lg text-white/80 shrink-0">arrow_drop_down</span>
                 </div>
               </div>
             </div>
@@ -256,8 +266,9 @@ export const FacultyDashboard = ({ user }) => {
                 {filteredMoas.map((moa, index) => (
                   <div key={moa.id} onClick={() => setSelectedMoa(moa)} className="p-5 hover:bg-black/[0.02] transition-colors animate-in fade-in cursor-pointer" style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}>
                     <div className="font-bold tracking-tight text-slate-800 mb-1">{moa.companyName}</div>
-                    <div className="text-[10px] font-bold text-slate-500 font-mono tracking-wider mb-3">{moa.hteId}</div>
-                    <div className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">{moa.college}</div>
+                    <div className="text-[10px] font-bold text-slate-500 font-mono tracking-wider mb-1">{moa.hteId}</div>
+                    <div className="text-[11px] font-bold text-slate-600 tracking-wider mb-3">Industry: {moa.industry || 'N/A'}</div>
+                    <div className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">{COLLEGES.find(c => c.name === moa.college || c.acronym === moa.college)?.acronym || moa.college}</div>
                     <div className="mb-3">
                       <StatusBadge status={moa.status} />
                     </div>
@@ -295,7 +306,6 @@ export const FacultyDashboard = ({ user }) => {
                       <th className="p-3 sm:p-4 hidden lg:table-cell">Industry</th>
                       <th className="p-3 sm:p-4 lg:p-6">College</th>
                       <th className="p-3 sm:p-4 hidden lg:table-cell">Status</th>
-                      <th className="p-3 sm:p-4 lg:p-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/5">
@@ -303,7 +313,7 @@ export const FacultyDashboard = ({ user }) => {
                       <tr key={moa.id} onClick={() => setSelectedMoa(moa)} className="hover:bg-white/50 hover:shadow-sm transition-all duration-300 font-bold group animate-in fade-in slide-in-from-bottom-2 cursor-pointer" style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}>
                         <td className="p-3 sm:p-4 lg:p-6"><div className="font-bold tracking-tight text-slate-800 text-xs sm:text-sm lg:text-base group-hover:text-maroon transition-colors duration-300 line-clamp-1">{moa.companyName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-mono tracking-wider line-clamp-1 mt-0.5">{moa.hteId}</div></td>
                         <td className="p-3 sm:p-4 text-slate-600 hidden lg:table-cell">{moa.industry || '-'}</td>
-                        <td className="p-3 sm:p-4 lg:p-6 text-slate-600 uppercase text-xs sm:text-xs whitespace-nowrap tracking-wide">{COLLEGES.find(c => c.name === moa.college)?.acronym || moa.college}</td>
+                        <td className="p-3 sm:p-4 lg:p-6 text-slate-600 uppercase text-xs sm:text-xs whitespace-nowrap tracking-wide">{COLLEGES.find(c => c.name === moa.college || c.acronym === moa.college)?.acronym || moa.college}</td>
                         <td className="p-3 sm:p-4 hidden lg:table-cell">
                           <StatusBadge status={moa.status} />
                         </td>
@@ -353,6 +363,7 @@ export const FacultyDashboard = ({ user }) => {
               <div>
                 <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">{selectedMoa.companyName}</h3>
                 <p className="text-xs font-bold text-slate-500 font-mono mt-1">{selectedMoa.hteId}</p>
+                <p className="text-xs font-bold text-slate-500 mt-1">Industry: {selectedMoa.industry || 'N/A'}</p>
               </div>
               <button onClick={() => setSelectedMoa(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors">
                 <span className="material-symbols-outlined block !text-xl">close</span>
@@ -363,18 +374,14 @@ export const FacultyDashboard = ({ user }) => {
               {/* Section: Partnership Details */}
               <section>
                 <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Partnership Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="sm:col-span-2">
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Assigned College</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedMoa.college || 'N/A'}</p>
+                    <p className="text-sm font-bold text-slate-800">{getFullCollegeName(selectedMoa.college)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Endorsed By</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedMoa.endorsedBy || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Industry</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedMoa.industry || 'N/A'}</p>
+                    <p className="text-sm font-bold text-slate-800">{getFullCollegeName(selectedMoa.endorsedBy)}</p>
                   </div>
                 </div>
               </section>
@@ -444,6 +451,30 @@ export const FacultyDashboard = ({ user }) => {
                 </div>
               </section>
             </div>
+
+            {/* Action Footer */}
+            <div className="px-6 py-5 sm:px-8 border-t border-black/5 shrink-0 bg-white/50 flex justify-end gap-3">
+              <button onClick={() => { 
+                setEditId(selectedMoa.id); 
+                setFormData({
+                  hteId: selectedMoa.hteId || '',
+                  companyName: selectedMoa.companyName || '',
+                  address: selectedMoa.address || '',
+                  contactPerson: selectedMoa.contactPerson || '',
+                  contactEmail: selectedMoa.contactEmail || '',
+                  industry: selectedMoa.industry || '',
+                  effectiveDate: toInputDate(selectedMoa.effectiveDate),
+                  expiryDate: toInputDate(selectedMoa.expiryDate),
+                  college: selectedMoa.college || '',
+                  endorsedBy: selectedMoa.endorsedBy || '',
+                  status: selectedMoa.status || '',
+                  notes: selectedMoa.notes || ''
+                }); 
+                setSelectedMoa(null);
+                setIsModalOpen(true); 
+              }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">edit</span> Edit Entry</button>
+              <button onClick={() => { handleDelete(selectedMoa.id, selectedMoa.companyName); setSelectedMoa(null); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">archive</span> Archive</button>
+            </div>
           </div>
         </div>
       )}
@@ -471,7 +502,7 @@ export const FacultyDashboard = ({ user }) => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <InputField label="Expiry Date" type="date" min={formData.effectiveDate} value={formData.expiryDate} onChange={v => setFormData({...formData, expiryDate: v})} />
-                <InputField label="Endorsed By" value={formData.endorsedBy} onChange={v => setFormData({...formData, endorsedBy: v})} />
+                <SelectField label="Endorsed By" value={formData.endorsedBy} options={COLLEGES.filter(c => c.name !== "ALL").map(c => c.name)} onChange={v => setFormData({...formData, endorsedBy: v})} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <SelectField label="Assigned College" value={formData.college} options={COLLEGES.filter(c => c.name !== "ALL").map(c => c.name)} onChange={v => setFormData({...formData, college: v})} />
@@ -479,7 +510,7 @@ export const FacultyDashboard = ({ user }) => {
               </div>
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1 block">Notes</label>
-                <textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Additional notes..." className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 focus:bg-white focus:ring-4 focus:ring-maroon/10 focus:border-maroon/20 transition-all text-sm h-20 resize-none placeholder:text-slate-400 custom-scrollbar" />
+                <textarea value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Additional notes..." className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 focus:bg-white focus:ring-4 focus:ring-maroon/10 focus:border-maroon/20 transition-all text-sm h-20 resize-none placeholder:text-slate-400 custom-scrollbar" />
               </div>
             </div>
             <div className="px-6 py-5 sm:px-8 border-t border-black/5 shrink-0 bg-white/50 flex justify-end gap-3">
@@ -511,19 +542,19 @@ const StatusBadge = memo(({ status }) => {
   );
 });
 
-const InputField = memo(({ label, value, onChange, placeholder, type = 'text', min }) => (
+const InputField = memo(({ label, value, onChange, placeholder = "", type = 'text', min }) => (
   <div className="text-left">
     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1 block">{label}</label>
     <input required type={type} min={min} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 focus:bg-white focus:ring-4 focus:ring-maroon/10 focus:border-maroon/20 transition-all text-sm placeholder:text-slate-400" />
   </div>
 ));
 
-const SelectField = memo(({ label, value, options, onChange }) => (
+const SelectField = memo(({ label, value, options = [], onChange }) => (
   <div className="text-left">
     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 mb-1 block">{label}</label>
     <select required value={value || ''} onChange={e => onChange(e.target.value)} className="w-full p-3.5 bg-black/[0.03] border border-transparent rounded-xl outline-none font-bold text-slate-800 focus:bg-white focus:ring-4 focus:ring-maroon/10 focus:border-maroon/20 transition-all text-sm appearance-none cursor-pointer">
       <option value="" disabled>Select an option</option>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
+      {options?.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
   </div>
 ));

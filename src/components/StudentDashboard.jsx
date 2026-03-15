@@ -16,6 +16,12 @@ const COLLEGES = [
   { name: "College of Nursing", acronym: "CON" }
 ];
 
+const getFullCollegeName = (val) => {
+  if (!val) return 'N/A';
+  const match = COLLEGES.find(c => c.name === val || c.acronym === val || String(val).includes(c.acronym));
+  return match && match.name !== "ALL" ? match.name : val;
+};
+
 export const StudentDashboard = ({ user }) => {
   const [moas, setMoas] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,10 +42,14 @@ export const StudentDashboard = ({ user }) => {
   const filteredMoas = moas.filter(moa => {
     if (!moa) return false;
     const lowerSearch = searchTerm.toLowerCase();
-    return String(moa.companyName || '').toLowerCase().includes(lowerSearch) ||
-           String(moa.contactPerson || '').toLowerCase().includes(lowerSearch) ||
-           String(moa.address || '').toLowerCase().includes(lowerSearch) &&
-           (filterCollege === 'ALL' || String(moa.college || '').includes(filterCollege));
+    
+    const matchesSearch = String(moa.companyName || '').toLowerCase().includes(lowerSearch) ||
+                          String(moa.contactPerson || '').toLowerCase().includes(lowerSearch) ||
+                          String(moa.address || '').toLowerCase().includes(lowerSearch);
+                          
+    const matchesCollege = filterCollege === 'ALL' || String(moa.college || '').toLowerCase().includes(filterCollege.toLowerCase()) || String(moa.college || '').includes(COLLEGES.find(c => c.name === filterCollege)?.acronym);
+    
+    return matchesSearch && matchesCollege;
   });
 
   const formatDate = (dateValue) => {
@@ -74,7 +84,7 @@ export const StudentDashboard = ({ user }) => {
     <div className="flex min-h-screen bg-pattern antialiased flex-col lg:flex-row relative">
 
       {/* Animated Background Orbs */}
-      <div className="absolute inset-0 pointer-events-none z-0">
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-maroon/20 blur-[120px] animate-pulse"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[35vw] h-[35vw] rounded-full bg-blue-500/15 blur-[120px] animate-pulse" style={{ animationDelay: '2s', animationDuration: '6s' }}></div>
       </div>
@@ -111,26 +121,24 @@ export const StudentDashboard = ({ user }) => {
       <main className="flex-1 flex flex-col min-w-0 w-full">
         <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-5">
           {/* Search Bar */}
-          <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all duration-500">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1 group flex items-center gap-3 bg-black/[0.03] border border-transparent focus-within:bg-white focus-within:border-maroon/20 focus-within:ring-4 focus-within:ring-maroon/10 focus-within:-translate-y-1 focus-within:shadow-md rounded-xl px-4 py-3 transition-all duration-300">
-                <div className="flex items-center justify-center pointer-events-none">
-                  <span className="material-symbols-outlined text-slate-400 !text-xl group-focus-within:text-maroon transition-colors">search</span>
-                </div>
-                <input type="text" placeholder="Search by company name, contact person..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full outline-none bg-transparent font-bold text-slate-800 placeholder:text-slate-400 text-sm sm:text-base pr-4" />
+          <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all duration-500">
+            <div className="flex flex-row gap-2 sm:gap-3 w-full">
+              <div className="relative flex-1 flex items-center gap-2 px-3 sm:px-4 py-3 bg-black/[0.03] border border-transparent rounded-xl sm:rounded-2xl focus-within:bg-white focus-within:ring-4 focus-within:ring-maroon/10 focus-within:border-maroon/20 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 group">
+                <span className="material-symbols-outlined text-slate-400 !text-xl shrink-0 group-focus-within:text-maroon transition-colors">search</span>
+                <input type="text" placeholder="Search partner institutions..." className="w-full bg-transparent outline-none font-bold text-sm sm:text-base text-slate-900 placeholder:text-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 {searchTerm && (
-                  <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-maroon transition-colors flex items-center justify-center hover:scale-110 active:scale-95">
+                  <button onClick={() => setSearchTerm('')} className="text-slate-400 hover:text-maroon transition-colors shrink-0 flex items-center justify-center hover:scale-110 active:scale-95">
                     <span className="material-symbols-outlined !text-lg">close</span>
                   </button>
                 )}
               </div>
-              <div className="relative w-full sm:w-32 group flex-shrink-0">
+              <div className="relative w-24 sm:w-32 shrink-0 group">
                 <select value={filterCollege} onChange={e => setFilterCollege(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                   {COLLEGES.map(c => <option key={c.acronym} value={c.name}>{c.name}</option>)}
                 </select>
-                <div className="w-full h-full p-3 bg-gradient-to-r from-maroon to-red-700 rounded-xl sm:rounded-2xl shadow-sm font-bold text-white flex items-center justify-between group-hover:-translate-y-0.5 group-hover:shadow-md transition-all group-focus-within:ring-4 group-focus-within:ring-red-500/30">
-                  <span className="truncate pr-2">{COLLEGES.find(c => c.name === filterCollege)?.acronym || 'ALL'}</span>
-                  <span className="material-symbols-outlined !text-lg text-white/80">arrow_drop_down</span>
+                <div className="w-full h-full px-2 sm:px-3 bg-gradient-to-r from-maroon to-red-700 rounded-xl sm:rounded-2xl shadow-sm font-bold text-white flex items-center justify-center gap-1 group-hover:-translate-y-0.5 group-hover:shadow-md transition-all group-focus-within:ring-4 group-focus-within:ring-red-500/30">
+                  <span className="truncate text-xs sm:text-sm">{COLLEGES.find(c => c.name === filterCollege)?.acronym || 'ALL'}</span>
+                  <span className="material-symbols-outlined !text-lg text-white/80 shrink-0">arrow_drop_down</span>
                 </div>
               </div>
             </div>
@@ -149,8 +157,9 @@ export const StudentDashboard = ({ user }) => {
                     style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}
                   >
                     <div className="font-bold tracking-tight text-slate-800 mb-1 line-clamp-1">{moa.companyName}</div>
-                    <div className="text-[10px] text-slate-500 font-mono tracking-wider mb-3">{moa.hteId}</div>
-                    <div className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">{moa.college}</div>
+                    <div className="text-[10px] text-slate-500 font-mono tracking-wider mb-1">{moa.hteId}</div>
+                    <div className="text-[11px] font-bold text-slate-600 tracking-wider mb-3">Industry: {moa.industry || 'N/A'}</div>
+                    <div className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">{COLLEGES.find(c => c.name === moa.college || c.acronym === moa.college)?.acronym || moa.college}</div>
                     <StatusBadge status={moa.status} />
                   </div>
                 ))}
@@ -177,7 +186,7 @@ export const StudentDashboard = ({ user }) => {
                       >
                         <td className="p-4 sm:p-6"><div className="font-bold tracking-tight text-slate-900 text-sm group-hover:text-maroon transition-colors duration-300 line-clamp-1">{moa.companyName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-mono tracking-wider line-clamp-1 mt-0.5">{moa.hteId}</div></td>
                         <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm hidden lg:table-cell">{moa.industry || '-'}</td>
-                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm uppercase tracking-wide">{COLLEGES.find(c => c.name === moa.college)?.acronym || moa.college}</td>
+                        <td className="p-4 sm:p-6 text-slate-700 text-xs sm:text-sm uppercase tracking-wide">{COLLEGES.find(c => c.name === moa.college || c.acronym === moa.college)?.acronym || moa.college}</td>
                         <td className="p-4 sm:p-6"><StatusBadge status={moa.status} /></td>
                       </tr>
                     ))}
@@ -213,6 +222,7 @@ export const StudentDashboard = ({ user }) => {
               <div>
                 <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">{selectedMoa.companyName}</h3>
                 <p className="text-xs font-bold text-slate-500 font-mono mt-1">{selectedMoa.hteId}</p>
+                <p className="text-xs font-bold text-slate-500 mt-1">Industry: {selectedMoa.industry || 'N/A'}</p>
               </div>
               <button onClick={() => setSelectedMoa(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors">
                 <span className="material-symbols-outlined block !text-xl">close</span>
@@ -223,18 +233,14 @@ export const StudentDashboard = ({ user }) => {
               {/* Section: Partnership Details */}
               <section>
                 <h4 className="text-xs font-bold text-maroon uppercase tracking-wider mb-4 border-b border-black/5 pb-2">Partnership Details</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="sm:col-span-2">
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Assigned College</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedMoa.college || 'N/A'}</p>
+                    <p className="text-sm font-bold text-slate-800">{getFullCollegeName(selectedMoa.college)}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Endorsed By</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedMoa.endorsedBy || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Industry</p>
-                    <p className="text-sm font-bold text-slate-800">{selectedMoa.industry || 'N/A'}</p>
+                    <p className="text-sm font-bold text-slate-800">{getFullCollegeName(selectedMoa.endorsedBy)}</p>
                   </div>
                 </div>
               </section>
