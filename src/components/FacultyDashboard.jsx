@@ -133,13 +133,13 @@ export const FacultyDashboard = ({ user }) => {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Delete agreement with ${name}?`)) return;
+  const handleArchive = async (id, name) => {
+    if (!window.confirm(`Archive agreement with ${name}?`)) return;
     try {
       await updateMOA(id, { isDeleted: true }, user);
       toast.success('Agreement archived', { duration: 2000 });
     } catch (error) {
-      toast.error('Error deleting agreement', { duration: 2000 });
+      toast.error('Error archiving agreement', { duration: 2000 });
     }
   };
 
@@ -306,7 +306,7 @@ export const FacultyDashboard = ({ user }) => {
                             }); 
                             setIsModalOpen(true); 
                           }} className="px-3 py-1.5 rounded-md font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 text-xs transition-colors"><span className="material-symbols-outlined !text-sm">edit</span></button>
-                          <button onClick={() => handleDelete(moa.id, moa.companyName)} className="px-3 py-1.5 rounded-md font-bold text-red-700 bg-red-50 hover:bg-red-100 text-xs transition-colors"><span className="material-symbols-outlined !text-sm">delete</span></button>
+                          <button onClick={() => handleArchive(moa.id, moa.companyName)} className="px-3 py-1.5 rounded-md font-bold text-red-700 bg-red-50 hover:bg-red-100 text-xs transition-colors" title="Archive"><span className="material-symbols-outlined !text-sm">archive</span></button>
                         </div>
                       </div>
                     ))}
@@ -352,7 +352,7 @@ export const FacultyDashboard = ({ user }) => {
                                 }); 
                                 setIsModalOpen(true); 
                               }} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors active:scale-95"><span className="material-symbols-outlined !text-base">edit</span></button>
-                              <button onClick={() => handleDelete(moa.id, moa.companyName)} className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors active:scale-95"><span className="material-symbols-outlined !text-base">delete</span></button>
+                              <button onClick={() => handleArchive(moa.id, moa.companyName)} className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors active:scale-95" title="Archive"><span className="material-symbols-outlined !text-base">archive</span></button>
                             </td>
                           </tr>
                         ))}
@@ -514,7 +514,7 @@ export const FacultyDashboard = ({ user }) => {
                 setSelectedMoa(null);
                 setIsModalOpen(true); 
               }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">edit</span> Edit Entry</button>
-              <button onClick={() => { handleDelete(selectedMoa.id, selectedMoa.companyName); setSelectedMoa(null); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">archive</span> Archive</button>
+              <button onClick={() => { handleArchive(selectedMoa.id, selectedMoa.companyName); setSelectedMoa(null); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">archive</span> Archive</button>
             </div>
           </div>
         </div>

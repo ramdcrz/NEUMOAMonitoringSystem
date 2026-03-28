@@ -60,7 +60,7 @@ export const StatisticsView = memo(({ moas = [] }) => {
   }, [filteredMoas]);
 
   return (
-        <div className="space-y-5 animate-in fade-in duration-500">
+        <div className="space-y-6 lg:space-y-8 animate-in fade-in duration-500">
           {/* Filters */}
           <div className="bg-white/80 rounded-3xl p-5 sm:p-6 lg:p-8 backdrop-blur-2xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all">
             <div className="flex items-center gap-2 mb-6">
@@ -97,69 +97,76 @@ export const StatisticsView = memo(({ moas = [] }) => {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
             <StatCard 
               icon="verified"
-              label="Active MOAs"
+              label="Active"
               value={stats.active}
               color="text-green-600"
               bgColor="bg-green-100/50"
-              total={stats.total}
             />
             <StatCard
               icon="schedule"
-              label="Processing MOAs"
+              label="Processing"
               value={stats.pending}
               color="text-blue-600"
               bgColor="bg-blue-100/50"
-              total={stats.total}
             />
             <StatCard
               icon="event_busy"
-              label="Expired MOAs"
+              label="Expired"
               value={stats.expired}
               color="text-red-600"
               bgColor="bg-red-100/50"
-              total={stats.total}
             />
             <StatCard
-              icon="schedule_close"
-              label="Expiring Soon"
+              icon="hourglass_bottom"
+              label="Expiring"
               value={stats.expiring}
               color="text-orange-600"
               bgColor="bg-orange-100/50"
-              total={stats.total}
             />
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 sm:p-8 shadow-lg relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
+            <div className="bg-gradient-to-br from-maroon to-red-700 rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgba(128,0,0,0.2)] relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 flex flex-col justify-center">
               <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
               <div className="relative z-10">
-                <p className="text-slate-400 font-bold text-[11px] uppercase tracking-wider mb-2">Total Agreements</p>
-                <p className="text-4xl sm:text-5xl font-black tracking-tight text-white mb-1">{stats.total}</p>
-                <p className="text-[11px] font-medium text-slate-400">Across all categories</p>
+                <p className="text-white/80 font-bold text-[11px] uppercase tracking-wider mb-3">Total MOAs</p>
+                <p className="text-5xl font-black tracking-tight text-white mb-4">{stats.total}</p>
+                <p className="text-[11px] font-medium text-white/80 pt-4 border-t border-white/10 flex items-center gap-1.5"><span className="material-symbols-outlined !text-[14px]">public</span> Across all categories</p>
               </div>
-              <span className="material-symbols-outlined absolute top-6 right-6 text-white/10 !text-6xl group-hover:rotate-12 transition-transform duration-500">folder_copy</span>
+              <span className="material-symbols-outlined absolute top-6 right-6 text-white/20 !text-6xl group-hover:rotate-12 transition-transform duration-500">folder_copy</span>
             </div>
             
-            <div className="bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center text-center hover:-translate-y-1 transition-all duration-300 group">
-              <p className="text-4xl font-black tracking-tight text-green-600 mb-2 drop-shadow-sm group-hover:scale-110 transition-transform">{stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}%</p>
-                <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Active Rate</p>
+            <div className="bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center items-center text-center hover:-translate-y-1 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <span className="material-symbols-outlined text-green-600 !text-2xl">trending_up</span>
+              </div>
+              <p className="text-4xl sm:text-5xl font-black tracking-tight text-green-600 mb-2 drop-shadow-sm transition-transform">{stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}%</p>
+              <p className="text-slate-500 font-bold text-[11px] uppercase tracking-wider">Active Rate</p>
             </div>
-            <div className="bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center text-center hover:-translate-y-1 transition-all duration-300 group">
-              <p className="text-4xl font-black tracking-tight text-blue-600 mb-2 drop-shadow-sm group-hover:scale-110 transition-transform">{stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0}%</p>
-                <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Processing Rate</p>
+            
+            <div className="bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center items-center text-center hover:-translate-y-1 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <span className="material-symbols-outlined text-blue-600 !text-2xl">sync</span>
+              </div>
+              <p className="text-4xl sm:text-5xl font-black tracking-tight text-blue-600 mb-2 drop-shadow-sm transition-transform">{stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0}%</p>
+              <p className="text-slate-500 font-bold text-[11px] uppercase tracking-wider">Processing Rate</p>
             </div>
-            <div className="bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center text-center hover:-translate-y-1 transition-all duration-300 group">
-              <p className="text-4xl font-black tracking-tight text-red-600 mb-2 drop-shadow-sm group-hover:scale-110 transition-transform">{stats.total > 0 ? Math.round((stats.expired / stats.total) * 100) : 0}%</p>
-                <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Expired Rate</p>
+            
+            <div className="bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center items-center text-center hover:-translate-y-1 transition-all duration-300 group">
+              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <span className="material-symbols-outlined text-red-600 !text-2xl">trending_down</span>
+              </div>
+              <p className="text-4xl sm:text-5xl font-black tracking-tight text-red-600 mb-2 drop-shadow-sm transition-transform">{stats.total > 0 ? Math.round((stats.expired / stats.total) * 100) : 0}%</p>
+              <p className="text-slate-500 font-bold text-[11px] uppercase tracking-wider">Expired Rate</p>
             </div>
           </div>
 
           {/* College Breakdown */}
-          <div className="bg-white/80 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all">
+          <div className="bg-white/80 rounded-3xl p-6 sm:p-8 lg:p-10 backdrop-blur-2xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-10 h-10 rounded-xl bg-maroon/10 flex items-center justify-center text-maroon shadow-sm">
                 <span className="material-symbols-outlined !text-xl">pie_chart</span>
@@ -200,19 +207,16 @@ export const StatisticsView = memo(({ moas = [] }) => {
   );
 });
 
-const StatCard = memo(({ icon, label, value, color, bgColor, total }) => (
-  <div className={`bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 ease-out group overflow-hidden relative animate-in fade-in slide-in-from-bottom-2`}>
-    <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${bgColor} blur-2xl opacity-60 group-hover:scale-150 transition-transform duration-700`}></div>
-    <div className="flex items-start justify-between mb-4 relative z-10">
+const StatCard = memo(({ icon, label, value, color, bgColor }) => (
+  <div className={`bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 lg:p-10 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 ease-out group overflow-hidden relative flex flex-col justify-center animate-in fade-in slide-in-from-bottom-2`}>
+    <div className={`absolute -right-6 -top-6 w-32 h-32 rounded-full ${bgColor} blur-3xl opacity-50 group-hover:scale-150 transition-transform duration-700`}></div>
+    <div className="flex items-start justify-between relative z-10">
       <div>
-        <p className="text-slate-500 font-bold text-[11px] uppercase tracking-wider mb-2">{label}</p>
-        <p className={`text-4xl sm:text-5xl font-black tracking-tight ${color}`}>{value}</p>
+        <p className="text-slate-500 font-bold text-[11px] uppercase tracking-wider mb-3">{label}</p>
+        <p className={`text-5xl font-black tracking-tight ${color}`}>{value}</p>
       </div>
-      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl ${bgColor} flex items-center justify-center transition-transform duration-500 ease-out group-hover:rotate-12 group-hover:scale-110 shadow-sm`}><span className={`material-symbols-outlined !text-2xl sm:!text-3xl ${color}`}>{icon}</span></div>
+      <div className={`w-14 h-14 rounded-2xl ${bgColor} flex items-center justify-center transition-transform duration-500 ease-out group-hover:rotate-12 group-hover:scale-110 shadow-sm shrink-0`}><span className={`material-symbols-outlined !text-3xl ${color}`}>{icon}</span></div>
     </div>
-    <p className="text-[11px] text-slate-500 font-bold relative z-10 flex items-center gap-1.5">
-      <span className="material-symbols-outlined !text-[14px] text-slate-400">monitoring</span> Total MOAs: {total}
-    </p>
   </div>
 ));
 

@@ -22,6 +22,7 @@ export const StudentDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [selectedMoa, setSelectedMoa] = useState(null);
   const [filterCollege, setFilterCollege] = useState('ALL');
+  const [activeTab, setActiveTab] = useState('list');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -76,7 +77,8 @@ export const StudentDashboard = ({ user }) => {
           </div>
         </div>
         <nav className="flex-1 space-y-2">
-          <SidebarBtn active={true} icon="dashboard" label="Agreements" onClick={() => {}} />
+          <SidebarBtn active={activeTab === 'list'} icon="dashboard" label="Agreements" onClick={() => setActiveTab('list')} />
+          <SidebarBtn active={activeTab === 'faq'} icon="help" label="FAQ" onClick={() => setActiveTab('faq')} />
         </nav>
         <div className="mt-auto pt-6 w-full border-t border-black/5">
           <div className="flex items-center gap-3 px-2 mb-4">
@@ -100,12 +102,13 @@ export const StudentDashboard = ({ user }) => {
             >
               <span className="material-symbols-outlined">{isMobileMenuOpen ? 'close' : 'menu'}</span>
             </button>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">Agreements</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">{activeTab === 'list' ? 'Agreements' : 'FAQ'}</h2>
           </div>
         </header>
 
         <section className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10">
-          <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+          {activeTab === 'list' ? (
+            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
           {/* Search Bar */}
           <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all duration-500">
             <div className="flex flex-row gap-2 sm:gap-3 w-full animate-in fade-in duration-500">
@@ -134,7 +137,7 @@ export const StudentDashboard = ({ user }) => {
           {!loading && filteredMoas.length > 0 ? (
             <div className="bg-white/70 rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all flex flex-col">
               {/* Mobile View: Cards */}
-              <div className="sm:hidden divide-y divide-black/5 overflow-y-auto max-h-[65vh] custom-scrollbar">
+              <div className="sm:hidden divide-y divide-black/5">
                 {filteredMoas.map((moa, index) => (
                   <div
                     key={moa.id}
@@ -196,7 +199,10 @@ export const StudentDashboard = ({ user }) => {
               <p className="text-slate-500 font-bold text-sm tracking-wide">Fetching agreements...</p>
             </div>
           )}
-          </div>
+            </div>
+          ) : (
+            <FAQSection />
+          )}
         </section>
       </main>
 
@@ -219,8 +225,11 @@ export const StudentDashboard = ({ user }) => {
             </div>
             
             <nav className="flex-1 space-y-2">
-              <button onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all bg-gradient-to-r from-maroon to-red-700 text-white">
+              <button onClick={() => { setActiveTab('list'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${activeTab === 'list' ? 'bg-gradient-to-r from-maroon to-red-700 text-white' : 'text-slate-600 hover:bg-black/5'}`}>
                 <span className="material-symbols-outlined">dashboard</span> Agreements
+              </button>
+              <button onClick={() => { setActiveTab('faq'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${activeTab === 'faq' ? 'bg-gradient-to-r from-maroon to-red-700 text-white' : 'text-slate-600 hover:bg-black/5'}`}>
+                <span className="material-symbols-outlined">help</span> FAQ
               </button>
             </nav>
             
@@ -283,4 +292,28 @@ const SidebarBtn = memo(({ active, icon, label, onClick }) => (
   <button onClick={onClick} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all duration-300 ease-out group ${active ? 'bg-gradient-to-r from-maroon to-red-700 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:brightness-110' : 'text-slate-600 hover:bg-black/5 hover:translate-x-1 hover:text-slate-900'}`}>
     <span className="material-symbols-outlined !text-lg group-hover:scale-110 transition-transform duration-300 ease-out">{icon}</span> {label}
   </button>
+));
+
+const FAQSection = memo(() => (
+  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out max-w-4xl">
+    <div className="bg-white/70 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
+      <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+        <span className="material-symbols-outlined text-maroon !text-3xl">live_help</span>
+        Frequently Asked Questions
+      </h3>
+      <div className="space-y-4">
+        <FAQItem question="What is an active MOA?" answer="An active Memorandum of Agreement (MOA) means that the university has a valid, unexpired partnership with the institution or company for internships, research, and other collaborative activities." />
+        <FAQItem question="Why can't I see certain companies?" answer="Students are only granted access to view APPROVED and active agreements. If a company is still under processing, pending legal review, or their agreement has expired, it won't appear on your dashboard until renewed." />
+        <FAQItem question="How often is this directory updated?" answer="The directory is updated in real-time by the faculty and administrators. Any newly approved agreement will instantly reflect here." />
+        <FAQItem question="Who should I contact for wrong or outdated information?" answer="If you notice discrepancies in the contact person or address for a specific company, please reach out to your respective college's OJT coordinator or the system administrator." />
+      </div>
+    </div>
+  </div>
+));
+
+const FAQItem = memo(({ question, answer }) => (
+  <div className="bg-black/[0.02] rounded-2xl p-5 border border-transparent hover:border-black/5 hover:bg-white transition-all duration-300">
+    <h4 className="font-bold text-slate-800 text-sm sm:text-base mb-2">{question}</h4>
+    <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">{answer}</p>
+  </div>
 ));
