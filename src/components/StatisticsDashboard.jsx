@@ -1,7 +1,4 @@
-import { useState, useEffect, memo, useMemo } from 'react';
-import { auth } from '../firebase';
-import { signOut } from 'firebase/auth';
-import { subscribeToMOAs } from '../services/moaService';
+import React, { useState, memo, useMemo } from 'react';
 
 const COLLEGES = [
   { name: "ALL", acronym: "ALL" },
@@ -16,19 +13,11 @@ const COLLEGES = [
   { name: "College of Nursing", acronym: "CON" }
 ];
 
-export const StatisticsDashboard = ({ user }) => {
-  const [moas, setMoas] = useState([]);
+export const StatisticsView = memo(({ moas = [] }) => {
   const [selectedCollege, setSelectedCollege] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = subscribeToMOAs(docs => {
-      setMoas(docs.filter(moa => !moa.isDeleted));
-    });
-    return unsubscribe;
-  }, []);
 
   const parseDate = (dateValue) => {
     if (!dateValue) return null;
@@ -39,7 +28,7 @@ export const StatisticsDashboard = ({ user }) => {
   };
 
   const filteredMoas = useMemo(() => moas.filter(moa => {
-    if (!moa) return false;
+    if (!moa || moa.isDeleted) return false;
     const collegeMatch = selectedCollege === 'ALL' || String(moa.college || '').includes(selectedCollege);
     
     let dateMatch = true;
@@ -57,60 +46,27 @@ export const StatisticsDashboard = ({ user }) => {
     return collegeMatch && dateMatch;
   }), [moas, selectedCollege, startDate, endDate]);
 
-  const stats = useMemo(() => ({
-    active: filteredMoas.filter(m => String(m.status || '').includes('APPROVED')).length,
-    pending: filteredMoas.filter(m => String(m.status || '').includes('PROCESSING')).length,
-    expired: filteredMoas.filter(m => String(m.status || '').includes('EXPIRED')).length,
-    expiring: filteredMoas.filter(m => String(m.status || '').includes('EXPIRING')).length,
-    total: filteredMoas.length
-  }), [filteredMoas]);
+  const stats = useMemo(() => {
+    return filteredMoas.reduce((acc, moa) => {
+      const status = String(moa.status || '');
+      if (status.includes('APPROVED')) acc.active++;
+      else if (status.includes('PROCESSING')) acc.pending++;
+      else if (status.includes('EXPIRED')) acc.expired++;
+      else if (status.includes('EXPIRING')) acc.expiring++;
+      
+      acc.total++;
+      return acc;
+    }, { active: 0, pending: 0, expired: 0, expiring: 0, total: 0 });
+  }, [filteredMoas]);
 
   return (
-    <div className="flex h-screen bg-pattern font-sans antialiased overflow-hidden flex-col lg:flex-row">
-      {/* Header */}
-      <div className="w-full bg-white/70 backdrop-blur-2xl border-b border-black/5 px-6 sm:px-8 py-4 sm:py-5 lg:hidden flex items-center justify-between shrink-0 z-20 sticky top-0 transition-all">
-        <h1 className="font-bold tracking-tight text-lg text-slate-900">Statistics</h1>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-white border border-black/5 rounded-xl shadow-sm active:scale-95 transition-all"><span className="material-symbols-outlined text-slate-700">menu</span></button>
-      </div>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 lg:hidden">
-          <div className="bg-white/90 backdrop-blur-3xl border border-black/5 rounded-3xl p-6 m-4 w-full max-w-xs shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in slide-in-from-top-4 duration-300">
-            <nav className="space-y-3">
-              <div className="px-4 py-3 rounded-xl bg-maroon text-white font-bold text-left flex items-center gap-3 shadow-sm">
-                <span className="material-symbols-outlined !text-xl">bar_chart</span> Statistics
-              </div>
-            </nav>
-          </div>
-        </div>
-      )}
-
-      {/* Sidebar */}
-      <aside className="hidden lg:flex w-72 bg-white/70 backdrop-blur-2xl border-r border-black/5 p-8 flex-col shrink-0 z-10 transition-all lg:sticky lg:top-0 lg:h-screen">
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-9 h-9 bg-maroon rounded-xl text-white flex items-center justify-center shadow-sm"><span className="material-symbols-outlined !text-xl">school</span></div>
-          <div>
-            <h1 className="font-bold tracking-tight text-xl text-slate-900">Portal</h1>
-            <p className="text-[10px] font-bold text-maroon uppercase tracking-wider">STATISTICS</p>
-          </div>
-        </div>
-        <nav className="space-y-3 flex-grow">
-        <div className="px-4 py-3 rounded-xl bg-maroon text-white font-bold flex items-center gap-3 shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer transition-all duration-300">
-          <span className="material-symbols-outlined !text-xl animate-pulse">bar_chart</span> Analytics
-          </div>
-        </nav>
-        <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-3 px-2">Account</div>
-        <div className="text-sm text-slate-800 font-bold mb-4 px-2 truncate">{user?.email}</div>
-      <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 hover:shadow-sm hover:-translate-y-0.5 rounded-xl font-bold text-slate-700 active:scale-95 flex items-center justify-center gap-2 transition-all duration-300 w-full"><span className="material-symbols-outlined !text-lg">logout</span> Sign Out</button>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 w-full">
-        <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-5">
+        <div className="space-y-5 animate-in fade-in duration-500">
           {/* Filters */}
-          <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all">
-            <p className="text-slate-900 font-bold tracking-tight text-base mb-4">Filters</p>
+          <div className="bg-white/80 rounded-3xl p-5 sm:p-6 lg:p-8 backdrop-blur-2xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all">
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-slate-400 !text-xl">tune</span>
+              <p className="text-slate-900 font-bold tracking-tight text-base">Dashboard Filters</p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <FilterSelect 
                 label="College" 
@@ -132,7 +88,7 @@ export const StatisticsDashboard = ({ user }) => {
               />
               <button 
                 onClick={() => { setSelectedCollege('ALL'); setStartDate(''); setEndDate(''); }}
-                className="col-span-full sm:col-span-1 lg:col-span-1 h-[52px] self-end px-4 flex items-center justify-center gap-2 bg-white border border-black/5 hover:bg-slate-50 hover:text-maroon hover:shadow-md hover:-translate-y-0.5 text-slate-700 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 active:translate-y-0 group"
+                className="col-span-full sm:col-span-1 lg:col-span-1 h-[52px] self-end px-4 flex items-center justify-center gap-2 bg-white border border-black/5 hover:bg-slate-50 hover:text-maroon hover:border-maroon/20 hover:shadow-md hover:-translate-y-0.5 text-slate-700 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 active:translate-y-0 group"
               >
                 <span className="material-symbols-outlined !text-lg group-hover:-rotate-180 transition-transform duration-500">restart_alt</span>
                 Reset Filters
@@ -146,7 +102,7 @@ export const StatisticsDashboard = ({ user }) => {
               icon="verified"
               label="Active MOAs"
               value={stats.active}
-              color="text-green-700"
+              color="text-green-600"
               bgColor="bg-green-100/50"
               total={stats.total}
             />
@@ -154,7 +110,7 @@ export const StatisticsDashboard = ({ user }) => {
               icon="schedule"
               label="Processing MOAs"
               value={stats.pending}
-              color="text-blue-700"
+              color="text-blue-600"
               bgColor="bg-blue-100/50"
               total={stats.total}
             />
@@ -162,7 +118,7 @@ export const StatisticsDashboard = ({ user }) => {
               icon="event_busy"
               label="Expired MOAs"
               value={stats.expired}
-              color="text-red-700"
+              color="text-red-600"
               bgColor="bg-red-100/50"
               total={stats.total}
             />
@@ -170,37 +126,46 @@ export const StatisticsDashboard = ({ user }) => {
               icon="schedule_close"
               label="Expiring Soon"
               value={stats.expiring}
-              color="text-orange-700"
+              color="text-orange-600"
               bgColor="bg-orange-100/50"
               total={stats.total}
             />
           </div>
 
-          {/* Summary Card */}
-          <div className="bg-white/70 rounded-3xl p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-              <div className="animate-in fade-in duration-500">
-                <p className="text-4xl font-bold tracking-tight text-maroon mb-2">{stats.total}</p>
-                <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Total Agreements</p>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 sm:p-8 shadow-lg relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+              <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+              <div className="relative z-10">
+                <p className="text-slate-400 font-bold text-[11px] uppercase tracking-wider mb-2">Total Agreements</p>
+                <p className="text-4xl sm:text-5xl font-black tracking-tight text-white mb-1">{stats.total}</p>
+                <p className="text-[11px] font-medium text-slate-400">Across all categories</p>
               </div>
-              <div className="animate-in fade-in duration-500" style={{ animationDelay: '100ms' }}>
-                <p className="text-4xl font-bold tracking-tight text-green-700 mb-2">{Math.round((stats.active / stats.total) * 100) || 0}%</p>
+              <span className="material-symbols-outlined absolute top-6 right-6 text-white/10 !text-6xl group-hover:rotate-12 transition-transform duration-500">folder_copy</span>
+            </div>
+            
+            <div className="bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center text-center hover:-translate-y-1 transition-all duration-300 group">
+              <p className="text-4xl font-black tracking-tight text-green-600 mb-2 drop-shadow-sm group-hover:scale-110 transition-transform">{stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}%</p>
                 <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Active Rate</p>
-              </div>
-              <div className="animate-in fade-in duration-500" style={{ animationDelay: '200ms' }}>
-                <p className="text-4xl font-bold tracking-tight text-blue-700 mb-2">{Math.round((stats.pending / stats.total) * 100) || 0}%</p>
+            </div>
+            <div className="bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center text-center hover:-translate-y-1 transition-all duration-300 group">
+              <p className="text-4xl font-black tracking-tight text-blue-600 mb-2 drop-shadow-sm group-hover:scale-110 transition-transform">{stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0}%</p>
                 <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Processing Rate</p>
-              </div>
-              <div className="animate-in fade-in duration-500" style={{ animationDelay: '300ms' }}>
-                <p className="text-4xl font-bold tracking-tight text-red-700 mb-2">{Math.round((stats.expired / stats.total) * 100) || 0}%</p>
+            </div>
+            <div className="bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-center text-center hover:-translate-y-1 transition-all duration-300 group">
+              <p className="text-4xl font-black tracking-tight text-red-600 mb-2 drop-shadow-sm group-hover:scale-110 transition-transform">{stats.total > 0 ? Math.round((stats.expired / stats.total) * 100) : 0}%</p>
                 <p className="text-slate-600 font-bold text-[11px] uppercase tracking-wider">Expired Rate</p>
-              </div>
             </div>
           </div>
 
           {/* College Breakdown */}
-          <div className="bg-white/70 rounded-3xl p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all">
-            <h3 className="text-xl font-bold tracking-tight text-slate-900 mb-6">Agreements by College</h3>
+          <div className="bg-white/80 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-maroon/10 flex items-center justify-center text-maroon shadow-sm">
+                <span className="material-symbols-outlined !text-xl">pie_chart</span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-900">Agreements by College</h3>
+            </div>
             <div className="space-y-3">
               {COLLEGES.filter(c => c.name !== 'ALL').map((collegeObj, index) => {
                 const collegeCount = moas.filter(m => m && String(m.college || '').includes(collegeObj.name) && !m.isDeleted).length;
@@ -208,18 +173,23 @@ export const StatisticsDashboard = ({ user }) => {
                 return (
                   <div 
                     key={collegeObj.name}
-                    className="animate-in fade-in duration-500"
+                    className="animate-in fade-in duration-500 group"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-slate-700">{collegeObj.name}</span>
-                      <span className="font-bold text-maroon">{collegeCount}</span>
+                      <span className="font-bold text-slate-600 text-xs sm:text-sm group-hover:text-slate-900 transition-colors">{collegeObj.name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold text-slate-400">{collegePercentage}%</span>
+                        <span className="font-black text-maroon text-sm w-6 text-right">{collegeCount}</span>
+                      </div>
                     </div>
-                    <div className="w-full bg-black/5 rounded-full h-2.5 overflow-hidden">
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-inner">
                       <div
-                        className="bg-maroon h-full transition-all duration-700 ease-out rounded-full"
+                        className="bg-gradient-to-r from-maroon to-red-500 h-full transition-all duration-1000 ease-out rounded-full relative"
                         style={{ width: `${collegePercentage}%` }}
-                      />
+                      >
+                        <div className="absolute inset-0 bg-white/20 w-full h-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -227,21 +197,22 @@ export const StatisticsDashboard = ({ user }) => {
             </div>
           </div>
         </div>
-      </main>
-    </div>
   );
-};
+});
 
 const StatCard = memo(({ icon, label, value, color, bgColor, total }) => (
-  <div className={`bg-white/70 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)] hover:bg-white/90 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2`}>
-    <div className="flex items-start justify-between mb-4">
+  <div className={`bg-white/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 ease-out group overflow-hidden relative animate-in fade-in slide-in-from-bottom-2`}>
+    <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${bgColor} blur-2xl opacity-60 group-hover:scale-150 transition-transform duration-700`}></div>
+    <div className="flex items-start justify-between mb-4 relative z-10">
       <div>
-        <p className="text-slate-500 font-bold text-[11px] uppercase tracking-wider mb-1">{label}</p>
-        <p className={`text-3xl sm:text-5xl font-bold tracking-tight ${color}`}>{value}</p>
+        <p className="text-slate-500 font-bold text-[11px] uppercase tracking-wider mb-2">{label}</p>
+        <p className={`text-4xl sm:text-5xl font-black tracking-tight ${color}`}>{value}</p>
       </div>
-      <div className={`p-3 rounded-xl ${bgColor} flex items-center justify-center transition-transform duration-500 hover:rotate-12 hover:scale-110`}><span className={`material-symbols-outlined !text-3xl ${color}`}>{icon}</span></div>
+      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl ${bgColor} flex items-center justify-center transition-transform duration-500 ease-out group-hover:rotate-12 group-hover:scale-110 shadow-sm`}><span className={`material-symbols-outlined !text-2xl sm:!text-3xl ${color}`}>{icon}</span></div>
     </div>
-    <p className="text-[11px] text-slate-500 font-bold">Total MOAs: {total}</p>
+    <p className="text-[11px] text-slate-500 font-bold relative z-10 flex items-center gap-1.5">
+      <span className="material-symbols-outlined !text-[14px] text-slate-400">monitoring</span> Total MOAs: {total}
+    </p>
   </div>
 ));
 

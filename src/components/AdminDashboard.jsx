@@ -5,6 +5,7 @@ import { collection, query, onSnapshot, doc, updateDoc } from 'firebase/firestor
 import toast from 'react-hot-toast';
 import { createMOA, subscribeToMOAs, archiveMOA, subscribeToAudit, updateMOA, restoreMOA, deleteMOAPermanently } from '../services/moaService';
 import { exportMOAsToPDF } from '../services/reportService';
+import { StatisticsView } from './StatisticsDashboard';
 
 const COLLEGES = [
   { name: "ALL", acronym: "ALL" },
@@ -77,35 +78,32 @@ const AdminDashboard = ({ user, role }) => {
     return () => { unsubMOAs(); unsubAudit(); unsubUsers(); };
   }, [isAdmin]);
 
-  const filteredMoas = useMemo(() => moas.filter(m => {
-    if (!m) return false;
-    const lowerSearch = searchTerm.toLowerCase();
-    const matchesSearch = 
-      String(m.companyName || '').toLowerCase().includes(lowerSearch) || 
-      String(m.hteId || '').toLowerCase().includes(lowerSearch) ||
-      String(m.contactPerson || '').toLowerCase().includes(lowerSearch) ||
-      String(m.address || '').toLowerCase().includes(lowerSearch) ||
-      String(m.industry || '').toLowerCase().includes(lowerSearch) ||
-      String(m.status || '').toLowerCase().includes(lowerSearch) ||
-      String(m.college || '').toLowerCase().includes(lowerSearch);
-    const matchesCollege = filterCollege === "ALL" || String(m.college || '').toLowerCase().includes(filterCollege.toLowerCase()) || String(m.college || '').includes(COLLEGES.find(c => c.name === filterCollege)?.acronym);
-    return !m.isDeleted && matchesSearch && matchesCollege;
-  }), [moas, searchTerm, filterCollege]);
-
-  const archivedMoas = useMemo(() => moas.filter(m => {
-    if (!m) return false;
-    const lowerSearch = searchTerm.toLowerCase();
-    const matchesSearch = 
-      String(m.companyName || '').toLowerCase().includes(lowerSearch) || 
-      String(m.hteId || '').toLowerCase().includes(lowerSearch) ||
-      String(m.contactPerson || '').toLowerCase().includes(lowerSearch) ||
-      String(m.address || '').toLowerCase().includes(lowerSearch) ||
-      String(m.industry || '').toLowerCase().includes(lowerSearch) ||
-      String(m.status || '').toLowerCase().includes(lowerSearch) ||
-      String(m.college || '').toLowerCase().includes(lowerSearch);
-    const matchesCollege = filterCollege === "ALL" || String(m.college || '').toLowerCase().includes(filterCollege.toLowerCase()) || String(m.college || '').includes(COLLEGES.find(c => c.name === filterCollege)?.acronym);
-    return m.isDeleted && matchesSearch && matchesCollege;
-  }), [moas, searchTerm, filterCollege]);
+  const filteredMoas = useMemo(() => {
+    const query = searchTerm.toLowerCase().trim();
+    const safeString = (str) => String(str || '').toLowerCase();
+    
+    return moas.filter(m => {
+      if (!m) return false;
+      
+      const matchesSearch = !query || 
+        safeString(m.companyName).includes(query) || 
+        safeString(m.hteId).includes(query) ||
+        safeString(m.contactPerson).includes(query) ||
+        safeString(m.address).includes(query) ||
+        safeString(m.industry).includes(query) ||
+        safeString(m.status).includes(query) ||
+        safeString(m.college).includes(query);
+        
+      const matchesCollege = filterCollege === "ALL" || 
+        safeString(m.college).includes(filterCollege.toLowerCase()) || 
+        String(m.college || '').includes(COLLEGES.find(c => c.name === filterCollege)?.acronym);
+        
+      return matchesSearch && matchesCollege;
+    }).sort((a, b) => {
+      if (a.isDeleted !== b.isDeleted) return a.isDeleted ? 1 : -1;
+      return String(a.companyName || '').localeCompare(String(b.companyName || ''));
+    });
+  }, [moas, searchTerm, filterCollege]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -264,8 +262,9 @@ const AdminDashboard = ({ user, role }) => {
         </div>
         <nav className="flex-1 space-y-2">
           <SidebarBtn active={activeTab === 'list'} icon="dashboard" label="Directory" onClick={() => setActiveTab('list')} />
-          {isAdmin && <SidebarBtn active={activeTab === 'users'} icon="manage_accounts" label="User Management" onClick={() => setActiveTab('users')} />}
-          {isAdmin && <SidebarBtn active={activeTab === 'audit' || activeTab === 'archive'} icon="history" label="Audit Trail" onClick={() => setActiveTab('audit')} />}
+          <SidebarBtn active={activeTab === 'statistics'} icon="bar_chart" label="Statistics" onClick={() => setActiveTab('statistics')} />
+          {isAdmin && <SidebarBtn active={activeTab === 'users'} icon="manage_accounts" label="Users" onClick={() => setActiveTab('users')} />}
+          {isAdmin && <SidebarBtn active={activeTab === 'audit'} icon="history" label="Audit Trail" onClick={() => setActiveTab('audit')} />}
         </nav>
         
         <div className="mt-auto pt-6 w-full border-t border-black/5">
@@ -282,37 +281,40 @@ const AdminDashboard = ({ user, role }) => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 w-full">
-        <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-black/5 p-4 sm:p-6 lg:p-10 pb-3 sm:pb-4 lg:pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 shadow-sm">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+        <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-black/5 p-4 sm:p-6 lg:p-10 pb-3 sm:pb-4 lg:pb-4 flex flex-row justify-between items-center gap-4 sm:gap-6 shadow-sm">
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden p-2 bg-white/50 hover:bg-white text-slate-800 rounded-xl border border-black/5 shadow-sm transition-all active:scale-95 flex items-center justify-center"
             >
               <span className="material-symbols-outlined">{isMobileMenuOpen ? 'close' : 'menu'}</span>
             </button>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">{activeTab === 'list' ? 'Directory' : activeTab === 'audit' ? 'Audit Trail' : activeTab === 'users' ? 'User Management' : 'Archive'}</h2>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">{activeTab === 'list' ? 'Directory' : activeTab === 'audit' ? 'Audit Trail' : activeTab === 'users' ? 'Users' : 'Statistics'}</h2>
           </div>
-          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2 sm:gap-3">
             {activeTab === 'list' && (isAdmin || isStaff) && (
               <>
-                <button onClick={() => exportMOAsToPDF(moas)} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-black/5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">description</span> <span className="hidden sm:inline">Export PDF</span></button>
-                <button onClick={() => setIsModalOpen(true)} className="bg-gradient-to-r from-maroon to-red-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 flex items-center gap-2 transition-all active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">add</span> New Entry</button>
+                <button onClick={() => exportMOAsToPDF(moas)} className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2.5 bg-white border border-black/5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">description</span> <span className="hidden sm:inline">Export PDF</span></button>
+                <button onClick={() => setIsModalOpen(true)} className="hidden sm:flex bg-gradient-to-r from-maroon to-red-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 items-center gap-2 transition-all duration-300 ease-out hover:brightness-110 active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">add</span> New Entry</button>
               </>
-            )}
-            {activeTab === 'audit' && isAdmin && (
-              <button onClick={() => setActiveTab('archive')} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-black/5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg text-slate-400">inventory_2</span> Archive</button>
-            )}
-            {activeTab === 'archive' && isAdmin && (
-              <button onClick={() => setActiveTab('audit')} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-black/5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg text-slate-400">arrow_back</span> Back to Audit</button>
             )}
           </div>
         </header>
 
         <section className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10">
+          {/* Floating Action Button for Mobile */}
+          {activeTab === 'list' && (isAdmin || isStaff) && (
+            <button 
+              onClick={() => setIsModalOpen(true)} 
+              className="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-gradient-to-r from-maroon to-red-700 text-white rounded-full shadow-[0_8px_32px_rgba(128,0,0,0.3)] flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 ease-out"
+            >
+              <span className="material-symbols-outlined !text-3xl">add</span>
+            </button>
+          )}
           <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
             {activeTab === 'list' ? (
             <div className="space-y-5">
-              <div className="flex flex-row gap-2 sm:gap-3 w-full">
+              <div className="flex flex-row gap-2 sm:gap-3 w-full animate-in fade-in duration-500">
                 <div className="relative flex-1 flex items-center gap-2 px-3 sm:px-4 py-3 bg-white/70 backdrop-blur-xl border border-black/5 rounded-xl sm:rounded-2xl shadow-sm focus-within:bg-white focus-within:ring-4 focus-within:ring-maroon/10 focus-within:border-maroon/20 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 group">
                   <span className="material-symbols-outlined text-slate-400 !text-xl shrink-0 group-focus-within:text-maroon transition-colors">search</span>
                   <input type="text" placeholder="Search partner institutions..." className="w-full bg-transparent outline-none font-bold text-sm sm:text-base text-slate-900 placeholder:text-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -339,7 +341,10 @@ const AdminDashboard = ({ user, role }) => {
                   <div className="sm:hidden divide-y divide-black/5">
                     {filteredMoas.map((moa, index) => (
                       <div key={moa.id} onClick={() => setSelectedMoa(moa)} className="p-5 hover:bg-black/[0.02] transition-colors animate-in fade-in cursor-pointer" style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}>
-                        <div className="font-bold tracking-tight text-slate-800 mb-1">{moa.companyName}</div>
+                    <div className={`font-bold tracking-tight mb-1 ${moa.isDeleted ? 'opacity-70 line-through text-slate-500' : 'text-slate-800'}`}>
+                      {moa.isDeleted && <span className="text-[10px] bg-slate-400 font-bold text-white px-2 py-0.5 rounded-full mr-2 no-underline inline-block align-middle">ARCHIVED</span>}
+                      {moa.companyName}
+                    </div>
                         <div className="text-[10px] font-bold text-slate-500 font-mono tracking-wider mb-1">{moa.hteId}</div>
                         <div className="text-[11px] font-bold text-slate-600 tracking-wider mb-3">Industry: {moa.industry || 'N/A'}</div>
                         <div className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">{COLLEGES.find(c => c.name === moa.college || c.acronym === moa.college)?.acronym || moa.college}</div>
@@ -354,36 +359,53 @@ const AdminDashboard = ({ user, role }) => {
                   <div className="hidden sm:block overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse text-xs sm:text-sm relative">
                       <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md font-bold text-[11px] text-slate-500 uppercase tracking-wider border-b border-black/5 shadow-sm">
-                      <tr><th className="p-2 sm:p-4 lg:p-6">Partner & ID</th><th className="p-2 sm:p-4 lg:p-6 hidden sm:table-cell">Industry</th><th className="p-2 sm:p-4 lg:p-6">College</th><th className="p-2 sm:p-4 lg:p-6">Status</th></tr>
+                      <tr><th className="p-2 sm:p-4 lg:p-6">Partner & ID</th><th className="p-2 sm:p-4 lg:p-6 hidden sm:table-cell">Industry</th><th className="p-2 sm:p-4 lg:p-6">College</th><th className="p-2 sm:p-4 lg:p-6">Status</th>{(isAdmin || isStaff) && <th className="p-2 sm:p-4 lg:p-6 text-right">Actions</th>}</tr>
                     </thead>
                     <tbody className="divide-y divide-black/5">
                       {filteredMoas.map((moa, index) => (
                         <tr key={moa.id} onClick={() => setSelectedMoa(moa)} className="hover:bg-white/50 hover:shadow-sm transition-all duration-300 font-bold group animate-in fade-in slide-in-from-bottom-2 cursor-pointer" style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}>
-                          <td className="p-2 sm:p-4 lg:p-6"><div className="font-bold tracking-tight text-slate-800 text-xs sm:text-sm lg:text-base group-hover:text-maroon transition-colors duration-300 line-clamp-1">{moa.companyName}</div><div className="text-[9px] sm:text-[10px] text-slate-500 font-mono tracking-wider line-clamp-1 mt-0.5">{moa.hteId}</div></td>
-                          <td className="p-2 sm:p-4 lg:p-6 text-slate-600 text-xs sm:text-sm whitespace-nowrap hidden sm:table-cell">{moa.industry || '-'}</td>
-                          <td className="p-2 sm:p-4 lg:p-6 text-slate-600 uppercase text-xs sm:text-xs whitespace-nowrap tracking-wide">{COLLEGES.find(c => c.name === moa.college || c.acronym === moa.college)?.acronym || moa.college}</td>
-                          <td className="p-2 sm:p-4 lg:p-6"><StatusBadge status={moa.status} /></td>
+                          <td className={`p-2 sm:p-4 lg:p-6 ${moa.isDeleted ? 'bg-slate-50' : ''}`}>
+                            <div className={`font-bold tracking-tight text-xs sm:text-sm lg:text-base transition-colors duration-300 line-clamp-1 flex items-center gap-2 ${moa.isDeleted ? 'text-slate-500 opacity-70 line-through group-hover:text-slate-600' : 'text-slate-800 group-hover:text-maroon'}`}>
+                              {moa.isDeleted && <span className="text-[10px] bg-slate-400 font-bold text-white px-2 py-0.5 rounded-full no-underline tracking-normal">ARCHIVED</span>}
+                              {moa.companyName}
+                            </div>
+                            <div className="text-[9px] sm:text-[10px] text-slate-500 font-mono tracking-wider line-clamp-1 mt-0.5">{moa.hteId}</div>
+                          </td>
+                          <td className={`p-2 sm:p-4 lg:p-6 text-slate-600 text-xs sm:text-sm whitespace-nowrap hidden sm:table-cell ${moa.isDeleted ? 'bg-slate-50 opacity-70' : ''}`}>{moa.industry || '-'}</td>
+                          <td className={`p-2 sm:p-4 lg:p-6 text-slate-600 uppercase text-xs sm:text-xs whitespace-nowrap tracking-wide ${moa.isDeleted ? 'bg-slate-50 opacity-70' : ''}`}>{COLLEGES.find(c => c.name === moa.college || c.acronym === moa.college)?.acronym || moa.college}</td>
+                          <td className={`p-2 sm:p-4 lg:p-6 ${moa.isDeleted ? 'bg-slate-50 opacity-70' : ''}`}><StatusBadge status={moa.status} /></td>
                           {(isAdmin || isStaff) && (
-                            <td className="p-2 sm:p-4 lg:p-6 text-right space-x-1 sm:space-x-2 flex justify-end" onClick={e => e.stopPropagation()}>
-                            <button onClick={() => { 
-                              setEditId(moa.id); 
-                              setFormData({
-                                hteId: moa.hteId || '',
-                                companyName: moa.companyName || '',
-                                address: moa.address || '',
-                                contactPerson: moa.contactPerson || '',
-                                contactEmail: moa.contactEmail || '',
-                                industry: moa.industry || 'Technology',
-                                effectiveDate: toInputDate(moa.effectiveDate),
-                                expiryDate: toInputDate(moa.expiryDate),
-                                college: moa.college || 'College of Informatics and Computing Studies',
-                                endorsedBy: moa.endorsedBy || '',
-                                status: moa.status || 'PENDING: Legal Review',
-                                notes: moa.notes || ''
-                              }); 
-                              setIsModalOpen(true); 
-                            }} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors active:scale-95" title="Edit"><span className="material-symbols-outlined !text-base sm:!text-lg">edit</span></button>
-                              {isAdmin && <button onClick={() => handleArchive(moa.id, moa.companyName)} className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors active:scale-95" title="Archive"><span className="material-symbols-outlined !text-base sm:!text-lg">archive</span></button>}
+                            <td className={`p-2 sm:p-4 lg:p-6 text-right space-x-1 sm:space-x-2 flex justify-end ${moa.isDeleted ? 'bg-slate-50' : ''}`} onClick={e => e.stopPropagation()}>
+                              {moa.isDeleted ? (
+                                isAdmin ? (
+                                  <>
+                                    <button onClick={() => handleRestore(moa.id, moa.companyName)} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors active:scale-95" title="Restore"><span className="material-symbols-outlined !text-base sm:!text-lg">restore</span></button>
+                                    <button onClick={() => handlePermanentDelete(moa.id, moa.companyName)} className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors active:scale-95" title="Permanent Delete"><span className="material-symbols-outlined !text-base sm:!text-lg">delete_forever</span></button>
+                                  </>
+                                ) : null
+                              ) : (
+                                <>
+                                  <button onClick={() => { 
+                                    setEditId(moa.id); 
+                                    setFormData({
+                                      hteId: moa.hteId || '',
+                                      companyName: moa.companyName || '',
+                                      address: moa.address || '',
+                                      contactPerson: moa.contactPerson || '',
+                                      contactEmail: moa.contactEmail || '',
+                                      industry: moa.industry || 'Technology',
+                                      effectiveDate: toInputDate(moa.effectiveDate),
+                                      expiryDate: toInputDate(moa.expiryDate),
+                                      college: moa.college || 'College of Informatics and Computing Studies',
+                                      endorsedBy: moa.endorsedBy || '',
+                                      status: moa.status || 'PENDING: Legal Review',
+                                      notes: moa.notes || ''
+                                    }); 
+                                    setIsModalOpen(true); 
+                                  }} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors active:scale-95" title="Edit"><span className="material-symbols-outlined !text-base sm:!text-lg">edit</span></button>
+                                  {isAdmin && <button onClick={() => handleArchive(moa.id, moa.companyName)} className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors active:scale-95" title="Archive"><span className="material-symbols-outlined !text-base sm:!text-lg">archive</span></button>}
+                                </>
+                              )}
                             </td>
                           )}
                         </tr>
@@ -401,6 +423,8 @@ const AdminDashboard = ({ user, role }) => {
                 </div>
               )}
             </div>
+        ) : activeTab === 'statistics' ? (
+          <StatisticsView moas={moas} />
             ) : activeTab === 'users' && isAdmin ? (
               <div className="bg-white/70 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all">
                 {/* Mobile View */}
@@ -451,8 +475,6 @@ const AdminDashboard = ({ user, role }) => {
                   </table>
                 </div>
               </div>
-            ) : activeTab === 'archive' && isAdmin ? (
-              <ArchiveVault moas={archivedMoas} onRestore={handleRestore} onPermanentDelete={handlePermanentDelete} isAdmin={isAdmin} />
             ) : ( <AuditTable logs={auditLogs} /> )}
           </div>
         </section>
@@ -494,6 +516,14 @@ const AdminDashboard = ({ user, role }) => {
               >
                 <span className="material-symbols-outlined">dashboard</span> Directory
               </button>
+          <button
+            onClick={() => { setActiveTab('statistics'); setIsMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${
+              activeTab === 'statistics' ? 'bg-gradient-to-r from-maroon to-red-700 text-white' : 'text-slate-600 hover:bg-black/5'
+            }`}
+          >
+            <span className="material-symbols-outlined">bar_chart</span> Statistics
+          </button>
               {role === 'admin' && (
                 <button
                   onClick={() => { setActiveTab('users'); setIsMobileMenuOpen(false); }}
@@ -501,14 +531,14 @@ const AdminDashboard = ({ user, role }) => {
                     activeTab === 'users' ? 'bg-gradient-to-r from-maroon to-red-700 text-white' : 'text-slate-600 hover:bg-black/5'
                   }`}
                 >
-                  <span className="material-symbols-outlined">manage_accounts</span> User Management
+                  <span className="material-symbols-outlined">manage_accounts</span> Users
                 </button>
               )}
               {role === 'admin' && (
                 <button
                   onClick={() => { setActiveTab('audit'); setIsMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${
-                    (activeTab === 'audit' || activeTab === 'archive') ? 'bg-gradient-to-r from-maroon to-red-700 text-white' : 'text-slate-600 hover:bg-black/5'
+                    activeTab === 'audit' ? 'bg-gradient-to-r from-maroon to-red-700 text-white' : 'text-slate-600 hover:bg-black/5'
                   }`}
                 >
                   <span className="material-symbols-outlined">history</span> Audit Trail
@@ -530,8 +560,8 @@ const AdminDashboard = ({ user, role }) => {
         </div>
       )}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-4 z-[60] animate-in fade-in duration-400">
-          <form onSubmit={handleSave} className="bg-white/90 backdrop-blur-3xl border border-black/5 w-full max-w-sm sm:max-w-md lg:max-w-xl rounded-3xl sm:rounded-[32px] shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center p-4 z-[60] animate-in fade-in duration-400" onMouseDown={closeModal}>
+          <form onMouseDown={e => e.stopPropagation()} onSubmit={handleSave} className="bg-white/90 backdrop-blur-3xl border border-black/5 w-full max-w-sm sm:max-w-md lg:max-w-xl rounded-3xl sm:rounded-[32px] shadow-[0_24px_60px_rgba(0,0,0,0.15)] animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 ease-out flex flex-col max-h-[90vh] overflow-hidden">
             <div className="px-6 py-6 sm:px-8 sm:py-6 border-b border-black/5 shrink-0 bg-white/50">
               <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">{editId ? 'Update' : 'New'} Agreement</h3>
             </div>
@@ -684,26 +714,37 @@ const AdminDashboard = ({ user, role }) => {
             {/* Action Footer */}
             {(isAdmin || isStaff) && (
               <div className="px-6 py-5 sm:px-8 border-t border-black/5 shrink-0 bg-white/50 flex justify-end gap-3">
-                <button onClick={() => { 
-                  setEditId(selectedMoa.id); 
-                  setFormData({
-                    hteId: selectedMoa.hteId || '',
-                    companyName: selectedMoa.companyName || '',
-                    address: selectedMoa.address || '',
-                    contactPerson: selectedMoa.contactPerson || '',
-                    contactEmail: selectedMoa.contactEmail || '',
-                    industry: selectedMoa.industry || '',
-                    effectiveDate: toInputDate(selectedMoa.effectiveDate),
-                    expiryDate: toInputDate(selectedMoa.expiryDate),
-                    college: selectedMoa.college || '',
-                    endorsedBy: selectedMoa.endorsedBy || '',
-                    status: selectedMoa.status || '',
-                    notes: selectedMoa.notes || ''
-                  }); 
-                  setSelectedMoa(null);
-                  setIsModalOpen(true); 
-                }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">edit</span> Edit Entry</button>
-                {isAdmin && <button onClick={() => { handleArchive(selectedMoa.id, selectedMoa.companyName); setSelectedMoa(null); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">archive</span> Archive</button>}
+                {selectedMoa.isDeleted ? (
+                  isAdmin && (
+                    <>
+                      <button onClick={() => { handleRestore(selectedMoa.id, selectedMoa.companyName); setSelectedMoa(null); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">restore</span> Restore</button>
+                      <button onClick={() => { handlePermanentDelete(selectedMoa.id, selectedMoa.companyName); setSelectedMoa(null); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">delete_forever</span> Delete</button>
+                    </>
+                  )
+                ) : (
+                  <>
+                    <button onClick={() => { 
+                      setEditId(selectedMoa.id); 
+                      setFormData({
+                        hteId: selectedMoa.hteId || '',
+                        companyName: selectedMoa.companyName || '',
+                        address: selectedMoa.address || '',
+                        contactPerson: selectedMoa.contactPerson || '',
+                        contactEmail: selectedMoa.contactEmail || '',
+                        industry: selectedMoa.industry || '',
+                        effectiveDate: toInputDate(selectedMoa.effectiveDate),
+                        expiryDate: toInputDate(selectedMoa.expiryDate),
+                        college: selectedMoa.college || '',
+                        endorsedBy: selectedMoa.endorsedBy || '',
+                        status: selectedMoa.status || '',
+                        notes: selectedMoa.notes || ''
+                      }); 
+                      setSelectedMoa(null);
+                      setIsModalOpen(true); 
+                    }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">edit</span> Edit Entry</button>
+                    {isAdmin && <button onClick={() => { handleArchive(selectedMoa.id, selectedMoa.companyName); setSelectedMoa(null); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors text-sm shadow-sm active:scale-95"><span className="material-symbols-outlined !text-base">archive</span> Archive</button>}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -715,8 +756,8 @@ const AdminDashboard = ({ user, role }) => {
 
 // --- Sub-components for absolute cleanliness ---
 const SidebarBtn = memo(({ active, icon, label, onClick }) => (
-  <button onClick={onClick} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all duration-300 group ${active ? 'bg-gradient-to-r from-maroon to-red-700 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5' : 'text-slate-600 hover:bg-black/5 hover:translate-x-1 hover:text-slate-900'}`}>
-    <span className="material-symbols-outlined !text-lg group-hover:scale-110 transition-transform duration-300">{icon}</span> {label}
+  <button onClick={onClick} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all duration-300 ease-out group ${active ? 'bg-gradient-to-r from-maroon to-red-700 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:brightness-110' : 'text-slate-600 hover:bg-black/5 hover:translate-x-1 hover:text-slate-900'}`}>
+    <span className="material-symbols-outlined !text-lg group-hover:scale-110 transition-transform duration-300 ease-out">{icon}</span> {label}
   </button>
 ));
 
@@ -770,9 +811,9 @@ const AuditTable = memo(({ logs }) => {
     {logs.length > 0 ? (
       <div className="bg-white/70 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all">
         {/* Mobile View: Stacked Cards */}
-        <div className="block sm:hidden divide-y divide-black/5">
-          {logs.map((log) => (
-            <div key={log.id} className="p-5 flex flex-col gap-3 hover:bg-black/[0.02] transition-colors duration-200">
+        <div className="sm:hidden divide-y divide-black/5">
+          {logs.map((log, index) => (
+            <div key={log.id} className="p-5 flex flex-col gap-3 hover:bg-black/[0.02] transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}>
               <div className="flex justify-between items-start">
                 <div>
                   <div className="font-bold tracking-tight text-slate-800 text-sm mb-0.5">{log.userName}</div>
@@ -812,8 +853,8 @@ const AuditTable = memo(({ logs }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5">
-              {logs.map(log => (
-                <tr key={log.id} className="hover:bg-black/[0.02] transition-colors duration-200">
+              {logs.map((log, index) => (
+                <tr key={log.id} className="hover:bg-black/[0.02] transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}>
                   <td className="p-3 sm:p-6 lg:p-8">
                     <div className="font-bold tracking-tight text-slate-800 text-xs sm:text-sm line-clamp-1 mb-0.5">{log.userName}</div>
                     <div className="text-[8px] sm:text-[10px] text-slate-500 font-mono truncate">{log.userEmail}</div>
@@ -845,75 +886,5 @@ const AuditTable = memo(({ logs }) => {
   </div>
   );
 });
-
-const ArchiveVault = memo(({ moas, onRestore, onPermanentDelete, isAdmin }) => (
-  <div className="space-y-5">
-    {moas.length > 0 ? (
-      <div className="bg-white/70 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-black/5 overflow-hidden transition-all">
-        {/* Mobile View */}
-        <div className="sm:hidden divide-y divide-black/5">
-          {moas.map(moa => (
-            <div key={moa.id} className="p-5 hover:bg-black/[0.02] transition-colors animate-in fade-in cursor-default">
-              <div className="font-bold tracking-tight text-slate-800 mb-1">{moa.companyName}</div>
-              <div className="text-[10px] font-bold text-slate-500 font-mono tracking-wider mb-1">{moa.hteId}</div>
-              <div className="text-[11px] font-bold text-slate-600 tracking-wider mb-3">Industry: {moa.industry || 'N/A'}</div>
-              <div className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">{moa.college}</div>
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide whitespace-nowrap w-fit mb-3 bg-slate-100 text-slate-500">
-                ARCHIVED
-              </span>
-              {isAdmin && (
-                <div className="flex gap-2 mt-1">
-                  <button onClick={() => onRestore(moa.id, moa.companyName)} className="px-3 py-1.5 rounded-md font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 text-xs transition-colors flex items-center gap-1"><span className="material-symbols-outlined !text-sm">restore</span> Restore</button>
-                  <button onClick={() => onPermanentDelete(moa.id, moa.companyName)} className="px-3 py-1.5 rounded-md font-bold text-red-700 bg-red-50 hover:bg-red-100 text-xs transition-colors flex items-center gap-1"><span className="material-symbols-outlined !text-sm">delete_forever</span> Delete</button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop View */}
-        <div className="hidden sm:block overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse text-xs sm:text-sm relative">
-            <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md font-bold text-[11px] text-slate-500 uppercase tracking-wider border-b border-black/5 shadow-sm">
-              <tr>
-                <th className="p-3 sm:p-4 lg:p-6">Partner & ID</th>
-                <th className="p-3 sm:p-4 lg:p-6 hidden sm:table-cell">Industry</th>
-                <th className="p-3 sm:p-4 lg:p-6">College</th>
-                <th className="p-3 sm:p-4 lg:p-6 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/5">
-              {moas.map(moa => (
-                <tr key={moa.id} className="hover:bg-white/50 hover:shadow-sm transition-all duration-300 font-bold group animate-in fade-in slide-in-from-bottom-2 cursor-default">
-                  <td className="p-3 sm:p-4 lg:p-6">
-                    <div className="font-bold tracking-tight text-slate-800 text-xs sm:text-sm lg:text-base group-hover:text-slate-900 transition-colors duration-300 line-clamp-1">{moa.companyName}</div>
-                    <div className="text-[9px] sm:text-[10px] text-slate-500 font-mono tracking-wider line-clamp-1 mt-0.5">{moa.hteId}</div>
-                  </td>
-                  <td className="p-3 sm:p-4 lg:p-6 text-slate-600 text-xs sm:text-sm whitespace-nowrap hidden sm:table-cell">{moa.industry || '-'}</td>
-                  <td className="p-3 sm:p-4 lg:p-6 text-slate-600 uppercase text-xs sm:text-xs whitespace-nowrap tracking-wide">{moa.college}</td>
-                  <td className="p-3 sm:p-4 lg:p-6 text-right space-x-2 flex justify-end">
-                    {isAdmin && (
-                      <>
-                        <button onClick={() => onRestore(moa.id, moa.companyName)} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors active:scale-95 flex items-center justify-center" title="Restore"><span className="material-symbols-outlined !text-base sm:!text-lg">restore</span></button>
-                        <button onClick={() => onPermanentDelete(moa.id, moa.companyName)} className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors active:scale-95 flex items-center justify-center" title="Permanent Delete"><span className="material-symbols-outlined !text-base sm:!text-lg">delete_forever</span></button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    ) : (
-      <div className="py-24 text-center space-y-4 bg-white/70 backdrop-blur-2xl rounded-3xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all group hover:bg-white/80">
-        <div className="w-20 h-20 bg-slate-100/50 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform duration-500 shadow-inner">
-          <span className="material-symbols-outlined !text-4xl text-slate-400">inventory_2</span>
-        </div>
-        <p className="text-slate-500 font-bold text-sm">Vault is empty.</p>
-      </div>
-    )}
-  </div>
-));
 
 export { AdminDashboard };

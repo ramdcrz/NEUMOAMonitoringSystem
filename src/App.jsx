@@ -9,7 +9,6 @@ import Login from './components/Login';
 import { AdminDashboard } from './components/AdminDashboard';
 import { FacultyDashboard } from './components/FacultyDashboard';
 import { StudentDashboard } from './components/StudentDashboard';
-import { StatisticsDashboard } from './components/StatisticsDashboard';
 
 /**
  * NEU MOA Monitoring System - Core Application Wrapper
@@ -26,7 +25,7 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       try {
         if (currentUser) {
-          const email = currentUser.email.toLowerCase();
+          const email = currentUser.email?.toLowerCase() || "";
           
           // 1. Database Check (For Manual Admin/Faculty/Staff Role Overrides)
           const userDoc = await getDoc(doc(db, "users", email));
@@ -34,8 +33,8 @@ function App() {
           if (userDoc.exists()) {
             setRole(userDoc.data().role || "student");
           } 
-          // 2. Institutional Pattern Check (@neu.edu.ph)
-          else if (email.endsWith("@neu.edu.ph")) {
+          // 2. Institutional Pattern Check (@neu.edu.ph) or Testing Override
+          else if (email.endsWith("@neu.edu.ph") || email === "nemostyles009@gmail.com") {
             const namePart = email.split('@')[0];
             // Format: firstname.lastname = Student (contains dot)
             // Format: f+lastname or similar pattern = Faculty (plus sign)
@@ -55,7 +54,6 @@ function App() {
       } catch (err) {
         console.error("Critical Auth Error:", err);
       } finally {
-        // Stop the "Eagle Portal" pulse animation
         setLoading(false);
       }
     });
@@ -69,7 +67,7 @@ function App() {
       <div className="h-screen bg-pattern flex flex-col items-center justify-center font-display animate-in fade-in zoom-in-95 duration-700">
         <div className="w-16 h-16 border-4 border-maroon/10 border-t-maroon rounded-full animate-spin mb-6"></div>
         <p className="font-black text-maroon text-xs uppercase tracking-[0.5em] animate-pulse">
-          Initializing Eagle Portal
+          Initializing
         </p>
       </div>
     );
@@ -101,7 +99,7 @@ function App() {
       ) : (
         <>
           {role === "admin" && <AdminDashboard user={user} role={role} />}
-          {role === "faculty" && <FacultyDashboard user={user} />}
+          {(role === "faculty" || role === "staff") && <FacultyDashboard user={user} />}
           {role === "student" && <StudentDashboard user={user} />}
           {!role && (
             <div className="h-screen flex items-center justify-center font-display">
@@ -111,7 +109,7 @@ function App() {
               </div>
             </div>
           )}
-          {role && role !== "admin" && role !== "faculty" && role !== "student" && (
+          {role && role !== "admin" && role !== "faculty" && role !== "staff" && role !== "student" && (
             <div className="h-screen flex items-center justify-center font-display">
               <div className="text-center space-y-4">
                 <p className="text-red-600 font-black">Unknown role: {role}</p>

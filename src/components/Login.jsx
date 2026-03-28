@@ -21,7 +21,8 @@ const Login = ({ onLoginSuccess }) => {
         return;
       }
 
-      const userDoc = await getDoc(doc(db, "users", user.email));
+      const userDocRef = doc(db, "users", user.email || "unknown");
+      const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
@@ -33,7 +34,7 @@ const Login = ({ onLoginSuccess }) => {
         }
         
         onLoginSuccess(user, userData.role || "student");
-      } else if (user.email.endsWith("@neu.edu.ph")) {
+      } else if (user.email.endsWith("@neu.edu.ph") || user.email === "nemostyles009@gmail.com") {
         await setDoc(userDocRef, {
           email: user.email,
           name: user.displayName || user.email.split('@')[0],
@@ -109,7 +110,7 @@ const Login = ({ onLoginSuccess }) => {
           <button 
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full py-3.5 sm:py-4 bg-white border border-black/5 rounded-2xl font-bold text-slate-800 hover:bg-slate-50 hover:scale-[1.02] hover:shadow-md hover:-translate-y-1 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 shadow-sm disabled:opacity-50 mb-8 animate-in slide-in-from-bottom-4 fade-in text-sm sm:text-base"
+            className="w-full py-3.5 sm:py-4 bg-white border border-black/5 rounded-2xl font-bold text-slate-800 hover:bg-slate-50 hover:scale-[1.02] hover:shadow-md hover:-translate-y-1 active:scale-95 transition-all duration-300 ease-out flex items-center justify-center gap-3 shadow-sm disabled:opacity-50 mb-8 animate-in slide-in-from-bottom-4 fade-in text-sm sm:text-base"
             style={{ animationDelay: '700ms', animationFillMode: 'backwards' }}
           >
             {loading ? (

@@ -16,44 +16,46 @@ const COLLEGES = [
   { name: "College of Nursing", acronym: "CON" }
 ];
 
-const getFullCollegeName = (val) => {
-  if (!val) return 'N/A';
-  const match = COLLEGES.find(c => c.name === val || c.acronym === val || String(val).includes(c.acronym));
-  return match && match.name !== "ALL" ? match.name : val;
-};
-
 export const StudentDashboard = ({ user }) => {
   const [moas, setMoas] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedMoa, setSelectedMoa] = useState(null);
   const [filterCollege, setFilterCollege] = useState('ALL');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToMOAs(docs => {
-      // Filter to show only APPROVED MOAs
-      const approvedMoas = docs.filter(moa => String(moa.status || '').includes('APPROVED'));
+      // Filter to show only APPROVED and non-deleted MOAs
+      const approvedMoas = docs.filter(moa => String(moa.status || '').includes('APPROVED') && !moa.isDeleted);
       setMoas(approvedMoas);
       setLoading(false);
     });
     return unsubscribe;
   }, []);
 
-  const filteredMoas = useMemo(() => moas.filter(moa => {
-    if (!moa) return false;
-    const lowerSearch = searchTerm.toLowerCase();
-    
-    const matchesSearch = String(moa.companyName || '').toLowerCase().includes(lowerSearch) ||
-                          String(moa.contactPerson || '').toLowerCase().includes(lowerSearch) ||
-                          String(moa.address || '').toLowerCase().includes(lowerSearch) ||
-                          String(moa.industry || '').toLowerCase().includes(lowerSearch) ||
-                          String(moa.status || '').toLowerCase().includes(lowerSearch) ||
-                          String(moa.college || '').toLowerCase().includes(lowerSearch);
-                          
-    const matchesCollege = filterCollege === 'ALL' || String(moa.college || '').toLowerCase().includes(filterCollege.toLowerCase()) || String(moa.college || '').includes(COLLEGES.find(c => c.name === filterCollege)?.acronym);
-    
-    return matchesSearch && matchesCollege;
-  }), [moas, searchTerm, filterCollege]);
+  const filteredMoas = useMemo(() => {
+    const query = searchTerm.toLowerCase().trim();
+    const safeString = (str) => String(str || '').toLowerCase();
+
+    return moas.filter(moa => {
+      if (!moa) return false;
+      
+      const matchesSearch = !query || 
+        safeString(moa.companyName).includes(query) ||
+        safeString(moa.contactPerson).includes(query) ||
+        safeString(moa.address).includes(query) ||
+        safeString(moa.industry).includes(query) ||
+        safeString(moa.status).includes(query) ||
+        safeString(moa.college).includes(query);
+                            
+      const matchesCollege = filterCollege === 'ALL' || 
+        safeString(moa.college).includes(filterCollege.toLowerCase()) || 
+        String(moa.college || '').includes(COLLEGES.find(c => c.name === filterCollege)?.acronym);
+      
+      return matchesSearch && matchesCollege;
+    }).sort((a, b) => String(a.companyName || '').localeCompare(String(b.companyName || '')));
+  }, [moas, searchTerm, filterCollege]);
 
   return (
     <div className="flex min-h-screen bg-pattern antialiased flex-col lg:flex-row relative">
@@ -64,40 +66,49 @@ export const StudentDashboard = ({ user }) => {
         <div className="absolute bottom-[-10%] right-[-10%] w-[35vw] h-[35vw] rounded-full bg-blue-500/15 blur-[120px] animate-pulse" style={{ animationDelay: '2s', animationDuration: '6s' }}></div>
       </div>
 
-      {/* Header */}
-      <div className="w-full bg-white/70 backdrop-blur-xl border-b border-black/5 px-6 sm:px-8 py-4 sm:py-5 lg:hidden flex items-center justify-between shrink-0 z-30 sticky top-0 shadow-sm transition-all">
-        <h1 className="font-bold tracking-tight text-lg text-slate-900">Student Portal</h1>
-        <div className="text-right">
-          <p className="text-sm font-bold tracking-tight text-slate-800">{(user?.email || '').split('@')[0]?.toUpperCase() || 'STUDENT'}</p>
-          <p className="text-[10px] font-bold text-slate-500">{user?.email}</p>
-        </div>
-      </div>
-
-      {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex w-72 bg-white/70 backdrop-blur-2xl border-r border-black/5 p-8 flex-col shrink-0 z-10 transition-all lg:sticky lg:top-0 lg:h-screen">
+      {/* Sidebar - Hidden on mobile, shown on lg+ */}
+      <aside className="hidden lg:flex w-72 bg-white/70 backdrop-blur-2xl border-r border-black/5 p-6 sm:p-8 flex-col shrink-0 z-10 transition-all lg:sticky lg:top-0 lg:h-screen">
         <div className="flex items-center gap-3 mb-10">
-          <div className="w-9 h-9 bg-maroon rounded-xl text-white flex items-center justify-center shadow-sm"><span className="material-symbols-outlined !text-xl">school</span></div>
+          <div className="w-9 h-9 bg-maroon rounded-xl text-white flex items-center justify-center shadow-sm flex-shrink-0"><span className="material-symbols-outlined !text-xl">school</span></div>
           <div className="min-w-0">
-            <h1 className="font-bold tracking-tight text-xl text-slate-900 truncate">Portal</h1>
-            <p className="text-[10px] font-bold text-maroon uppercase tracking-wider">STUDENT</p>
+            <h1 className="font-bold tracking-tight text-lg sm:text-xl bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent leading-tight truncate">Portal</h1>
+            <p className="text-[10px] font-bold text-maroon uppercase tracking-wider truncate">STUDENT</p>
           </div>
         </div>
-        <nav className="space-y-3 flex-grow">
-          <div className="px-4 py-3 rounded-xl bg-maroon text-white font-bold flex items-center gap-3 shadow-md hover:shadow-lg hover:scale-[1.02] cursor-pointer transition-all duration-300">
-            <span className="material-symbols-outlined !text-xl">list</span> Agreements
-          </div>
+        <nav className="flex-1 space-y-2">
+          <SidebarBtn active={true} icon="dashboard" label="Agreements" onClick={() => {}} />
         </nav>
-        <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-3 px-2">Account</div>
-        <div className="text-sm text-slate-800 font-bold mb-4 px-2 truncate">{user?.email}</div>
-        <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 hover:shadow-sm hover:-translate-y-0.5 rounded-xl font-bold text-slate-700 active:scale-95 flex items-center justify-center gap-2 transition-all duration-300 w-full"><span className="material-symbols-outlined !text-lg">logout</span> Sign Out</button>
+        <div className="mt-auto pt-6 w-full border-t border-black/5">
+          <div className="flex items-center gap-3 px-2 mb-4">
+            <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email || 'User'}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover bg-white p-[2px] border border-slate-200" referrerPolicy="no-referrer" />
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-sm text-slate-900 truncate">{user?.displayName || user?.email?.split('@')[0]}</span>
+              <span className="text-[10px] font-medium text-slate-500 truncate">{user?.email}</span>
+            </div>
+          </div>
+          <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 rounded-xl font-bold text-slate-700 flex items-center justify-center gap-2 transition-all active:scale-95 w-full"><span className="material-symbols-outlined !text-lg">logout</span> <span className="hidden sm:inline">Sign Out</span></button>
+        </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 w-full">
-        <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-5">
+        <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-black/5 p-4 sm:p-6 lg:p-10 pb-3 sm:pb-4 lg:pb-4 flex flex-row justify-between items-center gap-4 sm:gap-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-2 bg-white/50 hover:bg-white text-slate-800 rounded-xl border border-black/5 shadow-sm transition-all active:scale-95 flex items-center justify-center"
+            >
+              <span className="material-symbols-outlined">{isMobileMenuOpen ? 'close' : 'menu'}</span>
+            </button>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">Agreements</h2>
+          </div>
+        </header>
+
+        <section className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10">
+          <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
           {/* Search Bar */}
           <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 backdrop-blur-2xl border border-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all duration-500">
-            <div className="flex flex-row gap-2 sm:gap-3 w-full">
+            <div className="flex flex-row gap-2 sm:gap-3 w-full animate-in fade-in duration-500">
               <div className="relative flex-1 flex items-center gap-2 px-3 sm:px-4 py-3 bg-black/[0.03] border border-transparent rounded-xl sm:rounded-2xl focus-within:bg-white focus-within:ring-4 focus-within:ring-maroon/10 focus-within:border-maroon/20 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 group">
                 <span className="material-symbols-outlined text-slate-400 !text-xl shrink-0 group-focus-within:text-maroon transition-colors">search</span>
                 <input type="text" placeholder="Search partner institutions..." className="w-full bg-transparent outline-none font-bold text-sm sm:text-base text-slate-900 placeholder:text-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -185,8 +196,47 @@ export const StudentDashboard = ({ user }) => {
               <p className="text-slate-500 font-bold text-sm tracking-wide">Fetching agreements...</p>
             </div>
           )}
-        </div>
+          </div>
+        </section>
       </main>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="absolute left-0 top-0 h-full w-64 bg-white/90 backdrop-blur-3xl border-r border-black/5 p-6 flex flex-col shadow-[0_8px_32px_rgba(0,0,0,0.1)] animate-in slide-in-from-left duration-300 ease-out">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-maroon rounded-xl text-white flex items-center justify-center shadow-sm flex-shrink-0"><span className="material-symbols-outlined !text-xl">school</span></div>
+                <div className="min-w-0">
+                  <h1 className="font-bold tracking-tight text-lg text-slate-900 leading-tight truncate">Portal</h1>
+                  <p className="text-[10px] font-bold text-maroon uppercase tracking-wider truncate">STUDENT</p>
+                </div>
+              </div>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            
+            <nav className="flex-1 space-y-2">
+              <button onClick={() => setIsMobileMenuOpen(false)} className="w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all bg-gradient-to-r from-maroon to-red-700 text-white">
+                <span className="material-symbols-outlined">dashboard</span> Agreements
+              </button>
+            </nav>
+            
+            <div className="mt-auto pt-6 w-full border-t border-black/5">
+              <div className="flex items-center gap-3 px-2 mb-4">
+                <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email || 'User'}&background=800000&color=fff`} alt="Profile" className="w-10 h-10 rounded-full shadow-sm object-cover bg-white p-[2px] border border-slate-200" referrerPolicy="no-referrer" />
+                <div className="flex flex-col min-w-0">
+                  <span className="font-bold text-sm text-slate-900 truncate">{user?.displayName || user?.email?.split('@')[0]}</span>
+                  <span className="text-[10px] font-medium text-slate-500 truncate">{user?.email}</span>
+                </div>
+              </div>
+              <button onClick={() => signOut(auth)} className="p-3 bg-black/5 hover:bg-black/10 rounded-xl font-bold text-slate-700 active:scale-95 flex items-center justify-center gap-2 transition-all w-full"><span className="material-symbols-outlined">logout</span> Sign Out</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Detail View Modal */}
       {selectedMoa && (
@@ -229,20 +279,8 @@ export const StudentDashboard = ({ user }) => {
   );
 };
 
-const StatusBadge = memo(({ status }) => {
-  const safeStatus = String(status || '');
-  let bgColor = 'bg-slate-100/50 text-slate-700';
-  let dotColor = 'bg-slate-400';
-  if (safeStatus.includes('APPROVED')) { bgColor = 'bg-green-100/50 text-green-700'; dotColor = 'bg-green-500'; }
-  else if (safeStatus.includes('PENDING')) { bgColor = 'bg-blue-100/50 text-blue-700'; dotColor = 'bg-blue-500'; }
-  else if (safeStatus.includes('EXPIRING')) { bgColor = 'bg-orange-100/50 text-orange-700'; dotColor = 'bg-orange-500'; }
-  else if (safeStatus.includes('EXPIRED')) { bgColor = 'bg-red-100/50 text-red-700'; dotColor = 'bg-red-500'; }
-  
-  const shortStatus = safeStatus.split(':')[0] || safeStatus || 'UNKNOWN';
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide whitespace-nowrap w-fit line-clamp-1 ${bgColor}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dotColor} animate-pulse`}></span>
-      {shortStatus}
-    </span>
-  );
-});
+const SidebarBtn = memo(({ active, icon, label, onClick }) => (
+  <button onClick={onClick} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all duration-300 ease-out group ${active ? 'bg-gradient-to-r from-maroon to-red-700 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:brightness-110' : 'text-slate-600 hover:bg-black/5 hover:translate-x-1 hover:text-slate-900'}`}>
+    <span className="material-symbols-outlined !text-lg group-hover:scale-110 transition-transform duration-300 ease-out">{icon}</span> {label}
+  </button>
+));
