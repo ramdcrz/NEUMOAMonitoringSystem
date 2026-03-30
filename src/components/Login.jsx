@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { auth, googleProvider, db } from '../firebase';
 import { signInWithPopup, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 
 const Login = ({ onLoginSuccess }) => {
   const [error, setError] = useState("");
@@ -28,6 +29,7 @@ const Login = ({ onLoginSuccess }) => {
         const userData = userDoc.data();
         
         if (userData.blocked) {
+          toast.error("Account blocked by administrator.");
           setError("Account blocked by administrator.");
           await signOut(auth);
           return;

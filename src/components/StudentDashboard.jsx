@@ -1,7 +1,9 @@
 import { useState, useEffect, memo, useMemo } from 'react';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { subscribeToMOAs } from '../services/moaService';
+import toast from 'react-hot-toast';
 
 const COLLEGES = [
   { name: "ALL", acronym: "ALL" },
@@ -32,8 +34,16 @@ export const StudentDashboard = ({ user }) => {
       setMoas(approvedMoas);
       setLoading(false);
     });
-    return unsubscribe;
-  }, []);
+
+    const unsubUser = onSnapshot(doc(db, 'users', user?.email || 'unknown'), (docSnap) => {
+      if (docSnap.exists() && docSnap.data().blocked) {
+        toast.error('Your account has been blocked by an administrator.');
+        signOut(auth);
+      }
+    });
+
+    return () => { unsubscribe(); unsubUser(); };
+  }, [user?.email]);
 
   const filteredMoas = useMemo(() => {
     const query = searchTerm.toLowerCase().trim();

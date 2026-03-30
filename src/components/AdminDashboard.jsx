@@ -76,8 +76,16 @@ const AdminDashboard = ({ user, role }) => {
       const q = query(collection(db, "users"));
       unsubUsers = onSnapshot(q, (snap) => setSystemUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     }
-    return () => { unsubMOAs(); unsubAudit(); unsubUsers(); };
-  }, [isAdmin]);
+
+    const unsubUser = onSnapshot(doc(db, 'users', user?.email || 'unknown'), (docSnap) => {
+      if (docSnap.exists() && docSnap.data().blocked) {
+        toast.error('Your account has been blocked by an administrator.');
+        signOut(auth);
+      }
+    });
+
+    return () => { unsubMOAs(); unsubAudit(); unsubUsers(); unsubUser(); };
+  }, [isAdmin, user?.email]);
 
   const filteredMoas = useMemo(() => {
     const query = searchTerm.toLowerCase().trim();
@@ -295,7 +303,7 @@ const AdminDashboard = ({ user, role }) => {
           <div className="flex items-center gap-2 sm:gap-3">
             {activeTab === 'list' && (isAdmin || isStaff) && (
               <>
-                <button onClick={async () => { const toastId = toast.loading('Seeding database...'); await seedDatabase(); toast.dismiss(toastId); }} className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-xl font-bold transition-all shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">database</span> Seed Data</button>
+                <button onClick={async () => { const toastId = toast.loading('Seeding database...'); await seedDatabase(); toast.dismiss(toastId); }} className="hidden lg:flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 rounded-xl font-bold transition-all shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">database</span> Seed Data</button>
                 <button onClick={() => exportMOAsToPDF(moas)} className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2.5 bg-white border border-black/5 rounded-xl font-bold text-slate-700 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out shadow-sm active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">description</span> <span className="hidden sm:inline">Export PDF</span></button>
                 <button onClick={() => setIsModalOpen(true)} className="hidden sm:flex bg-gradient-to-r from-maroon to-red-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 items-center gap-2 transition-all duration-300 ease-out hover:brightness-110 active:scale-95 text-sm whitespace-nowrap"><span className="material-symbols-outlined !text-lg">add</span> New Entry</button>
               </>
